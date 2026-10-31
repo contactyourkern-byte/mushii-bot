@@ -396,6 +396,7 @@ async function handleMessages(sock, message) {
                 await awayPlugin.handleAutoReply(sock, message, text, {
                     jid,
                     from,
+                    senderNumber: senderNumberForAway,
                     isGroup,
                     isOwner: false,
                     isProtocolMessage: false,
