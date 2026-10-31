@@ -384,6 +384,7 @@ test('uses Gemini as the primary provider when both AI keys are configured', asy
         assert.match(calls[0].url, /generativelanguage\.googleapis\.com/);
         assert.equal(calls[0].options.headers['x-goog-api-key'], 'test-gemini-key');
         assert.equal(calls[0].body.generationConfig.maxOutputTokens, 450);
+        assert.equal(calls[0].body.generationConfig.thinkingConfig.thinkingLevel, 'low');
     } finally {
         axios.post = originalPost;
         if (previousGeminiKey === undefined) delete process.env.GEMINI_API_KEY;
@@ -421,6 +422,7 @@ test('falls back to Groq when Gemini returns a rate limit', async () => {
         assert.match(calls[1].url, /api\.groq\.com\/openai\/v1\/chat\/completions/);
         assert.equal(calls[1].options.headers.Authorization, 'Bearer test-groq-key');
         assert.equal(calls[1].body.model, 'openai/gpt-oss-20b');
+        assert.equal(calls[1].body.include_reasoning, false);
     } finally {
         axios.post = originalPost;
         if (previousGeminiKey === undefined) delete process.env.GEMINI_API_KEY;
