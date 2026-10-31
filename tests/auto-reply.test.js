@@ -93,7 +93,8 @@ test('conversation history is private per contact, bounded, expires, and ignores
     assert.equal(history.get('b@s.whatsapp.net')[0].text, 'Nitwa Keza.');
 
     for (let i = 0; i < HISTORY_LIMIT + 3; i++) {
-        history.add({ jid: 'a@s.whatsapp.net', role: 'user', text: 'Ubutumwa ' + i, at: timestamp + i * 6000 });
+        timestamp += 6000;
+        history.add({ jid: 'a@s.whatsapp.net', role: 'user', text: 'Ubutumwa ' + i, at: timestamp });
     }
     assert.equal(history.get('a@s.whatsapp.net').length, HISTORY_LIMIT);
 
