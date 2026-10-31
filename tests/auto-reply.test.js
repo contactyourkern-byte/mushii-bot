@@ -203,9 +203,13 @@ test('automatic reply does not block the normal .menu command', async t => {
 test('premium menu includes every existing command with exact syntax', async () => {
     let result;
     await menuPlugin.run({}, {}, [], { command: 'menu', reply: async text => { result = text; } });
-    assert.match(result, /✨ \*MUSHII ELITE\* ✨/);
-    assert.match(result, /〔 01 · 🎮 \*GAMES & FUN\* 〕/);
-    assert.match(result, /〔 02 · 🎵 \*MUSIC & VIDEO\* 〕/);
+    assert.match(result, /^\*MUSHII ELITE\*/);
+    assert.match(result, /\*🎮 GAMES & FUN\*/);
+    assert.match(result, /\*🎵 MUSIC & VIDEO\*/);
+    assert.match(result, /\*💎 QUICK START\*/);
+    assert.match(result, /```[\s\S]*\.play Basara Zuba Ray[\s\S]*```/);
+    assert.doesNotMatch(result, /[╭╮╰╯═━]/);
+    assert.doesNotMatch(result, /&#x20;|&#\d+;/);
 
     for (const syntax of [
         '.joke', '.truth', '.dare', '.riddle', '.8ball <question>',

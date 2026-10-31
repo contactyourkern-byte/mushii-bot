@@ -1,27 +1,32 @@
 'use strict';
 
 const MENU_LINES = [
-    '╭━━━〔 01 · 🎮 *GAMES & FUN* 〕━━━',
-    '│ 😂 `.joke` — Get a random joke',
-    '│ 💬 `.truth` — Answer a fun truth question',
-    '│ 🎯 `.dare` — Take on a playful dare',
-    '│ 🧩 `.riddle` — Solve a brain teaser',
-    '│ 🔮 `.8ball <question>` — Ask the magic 8-ball',
-    '│ 💞 `.ship <name> and <name>` — Check name compatibility',
-    '│ ✊ `.rps <rock|paper|scissors>` — Play rock-paper-scissors',
-    '│ 🎲 `.dice [sides]` — Roll a die',
-    '│ 🏆 `.trivia` — Play a trivia quiz',
-    '│ ✨ `.compliment` — Get a feel-good compliment',
-    '╰━━━━━━━━━━━━━━━━━━━━━━',
+    '*🎮 GAMES & FUN*',
+    '😂 `.joke` — Random joke',
+    '💬 `.truth` — Truth question',
+    '🎯 `.dare` — Fun dare',
+    '🧩 `.riddle` — Brain teaser',
+    '🔮 `.8ball <question>` — Ask the 8-ball',
+    '💞 `.ship <name> and <name>` — Name compatibility',
+    '✊ `.rps <rock|paper|scissors>` — Rock-paper-scissors',
+    '🎲 `.dice [sides]` — Roll a die',
+    '🏆 `.trivia` — Trivia quiz',
+    '✨ `.compliment` — Get a compliment',
     '',
-    '╭━━━〔 02 · 🎵 *MUSIC & VIDEO* 〕━━━',
-    '│ 🎧 `.play <song or YouTube link>` — Find and play a song',
-    '│ 🎵 `.ytmp3 <YouTube link>` — Download YouTube audio',
-    '│ 🎬 `.ytmp4 <YouTube link>` — Download a YouTube video',
-    '│ 📥 `.download <public media link> [mp3|mp4]` — Download public media',
-    '╰━━━━━━━━━━━━━━━━━━━━━━',
+    '*🎵 MUSIC & VIDEO*',
+    '🎧 `.play <song or YouTube link>` — Find and play music',
+    '🎵 `.ytmp3 <YouTube link>` — Download YouTube audio',
+    '🎬 `.ytmp4 <YouTube link>` — Download YouTube video',
+    '📥 `.download <public media link> [mp3|mp4]` — Download media',
     '',
-    '✨ Type `.menu` anytime to explore MUSHII ELITE.'
+    '*💎 QUICK START*',
+    'Pick a command, copy an example, and send it:',
+    '```',
+    '.play Basara Zuba Ray',
+    '.8ball Will I have a great day?',
+    '.ship Alice and Bob',
+    '```',
+    '_Type .menu anytime to explore MUSHII ELITE._'
 ];
 
 const COMMAND_HELP = {
@@ -43,10 +48,8 @@ const COMMAND_HELP = {
 
 function buildMenu() {
     return [
-        '╔══════════════════════╗',
-        '      ✨ *MUSHII ELITE* ✨',
-        '   _Your premium entertainment_',
-        '╚══════════════════════╝',
+        '*MUSHII ELITE*',
+        '_Premium entertainment, ready to play._',
         '',
         ...MENU_LINES
     ].join('\n');
