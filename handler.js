@@ -377,9 +377,19 @@ async function handleMessages(sock, message) {
             || sudoForAway;
         const privateJidForAway = typeof jid === 'string'
             && ['@s.whatsapp.net', '@lid', '@c.us'].some(suffix => jid.endsWith(suffix));
-        if (autoReplyEnabled && awayPlugin && !ownerForAway && privateJidForAway && !isGroup
+        const eligibleConversationMessage = autoReplyEnabled && awayPlugin
+            && privateJidForAway && !isGroup
             && !isCommandMessage(text, config.PREFIX, plugins)
-            && !msg.protocolMessage && !rawMsg.protocolMessage) {
+            && !msg.protocolMessage && !rawMsg.protocolMessage;
+
+        // Keep a short, in-memory transcript per private contact while AI Auto Reply
+        // is enabled. This records incoming and owner's manual outgoing messages.
+        if (eligibleConversationMessage) {
+            try { awayPlugin.recordConversationMessage(message, text); }
+            catch (error) { console.warn('[Auto Reply] Conversation memory skipped:', error.message); }
+        }
+
+        if (eligibleConversationMessage && !ownerForAway && !message.key.fromMe) {
             try {
                 await awayPlugin.handleAutoReply(sock, message, text, {
                     jid,
@@ -387,7 +397,23 @@ async function handleMessages(sock, message) {
                     isGroup,
                     isOwner: false,
                     isProtocolMessage: false,
-                    safeSend: (content, opts) => safeSend(sock, jid, content, opts)
+                    safeSend: (content, opts) => safeSend(sock, jid, content, opts),
+                    notifyOwner: async ({ reason }) => {
+                        if (!ownerNumberForAway) throw new Error('OWNER_NUMBER is not configured');
+                        const ownerJid = ownerNumberForAway + '@s.whatsapp.net';
+                        const notice = [
+                            '🧑‍💼 *MUSHII AI — HUMAN HANDOFF*',
+                            '',
+                            'Contact: ' + (message.pushName || from),
+                            'Message: ' + String(text || '').slice(0, 900),
+                            reason ? 'Reason: ' + reason : '',
+                            '',
+                            'Please open this contact and reply manually.'
+                        ].filter(Boolean).join('\n');
+                        const sent = await safeSend(sock, ownerJid, { text: notice });
+                        if (sent === null) throw new Error('Could not deliver the owner handoff notice');
+                        return sent;
+                    }
                 });
             } catch (error) {
                 console.error('[Auto Reply] Automatic reply failed:', error.message);

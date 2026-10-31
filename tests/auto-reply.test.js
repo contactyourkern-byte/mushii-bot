@@ -8,17 +8,14 @@ const test = require('node:test');
 
 const {
     COOLDOWN_MS,
-    DEFAULT_REPLY,
-    GREETING_REPLY,
+    HISTORY_LIMIT,
+    buildAutoReplyPrompt,
     createAutoReply,
+    createConversationHistory,
     isCommandMessage,
-    isGreeting,
-    responseFor
+    parseAIReply
 } = require('../lib/auto-reply');
 const { __test: awayTest } = require('../plugins/away');
-const menuPlugin = require('../plugins/menu');
-const { handleMessages, plugins } = require('../handler');
-const registeredCommands = new Set(plugins.flatMap(plugin => plugin.commands || []));
 
 async function createStatePath(t) {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mushii-away-test-'));
@@ -26,132 +23,37 @@ async function createStatePath(t) {
     return path.join(directory, 'away.json');
 }
 
-test('detects supported greetings without matching words embedded in other words', () => {
-    for (const greeting of [
-        'Hi!', 'Hello there', 'Hey MUSHII', 'Muraho', 'Amakuru?', 'Mwaramutse',
-        'Mwiriwe', 'Bite', 'Good morning', 'Good evening'
-    ]) {
-        assert.equal(isGreeting(greeting), true, `${greeting} should be recognized`);
-        assert.equal(responseFor(greeting), GREETING_REPLY);
-    }
-
-    for (const message of ['this is a song', 'high quality', 'good afternoon', '']) {
-        assert.equal(isGreeting(message), false, `${message} should not be recognized`);
-        assert.equal(responseFor(message), DEFAULT_REPLY);
-    }
-});
-
-test('greeting reply introduces every existing entertainment command with examples', () => {
-    assert.equal(GREETING_REPLY, [
-        '✨ *HEY THERE! WELCOME TO MUSHII ELITE* ✨',
-        '',
-        '👋 Muraho neza! Thanks for reaching out!',
-        '',
-        'Iragena is not online right now, ariko ntugire ikibazo! ❤️',
-        '',
-        'You can still enjoy MUSHII Entertainment.',
-        'Choose any command below and try it!',
-        '',
-        '🎮 *GAMES & FUN*',
-        '😂 .joke — Random jokes',
-        '💭 .truth — Truth questions',
-        '🎯 .dare — Fun challenges',
-        '🧩 .riddle — Brain teasers',
-        '🔮 .8ball <question> — Ask anything',
-        '💞 .ship <name> and <name>',
-        '✊ .rps <rock|paper|scissors>',
-        '🎲 .dice [sides]',
-        '🏆 .trivia — Test your knowledge',
-        '✨ .compliment — Get a compliment',
-        '',
-        '🎵 *MUSIC & VIDEO*',
-        '🎧 .play <song or YouTube link>',
-        '🎵 .ytmp3 <YouTube link>',
-        '🎬 .ytmp4 <YouTube link>',
-        '📥 .download <public media link> [mp3|mp4]',
-        '',
-        '🚀 *TRY THESE COMMANDS NOW!*',
-        '',
-        'Copy and send:',
-        '```',
-        '.play Basara Zuba Ray',
-        '.joke',
-        '.trivia',
-        '```',
-        '',
-        '💎 Type .menu to explore more!',
-        '',
-        '*Enjoy MUSHII ELITE!* ❤️'
-    ].join('\n'));
-
-    for (const command of ['joke', 'truth', 'dare', 'riddle', '8ball', 'ship', 'rps',
-        'dice', 'trivia', 'compliment', 'play', 'ytmp3', 'ytmp4', 'download']) {
-        assert.ok(registeredCommands.has(command), `.${command} must remain registered`);
-        assert.match(GREETING_REPLY, new RegExp(`\\.${command}(?:\\s|$)`));
-    }
-});
-
-test('default reply includes the requested help and two registered commands', () => {
-    assert.equal(DEFAULT_REPLY, [
-        '✨ MUSHII ENTERTAINMENT ✨',
-        '',
-        'Hey! 👋 Iragena is not online right now.',
-        '',
-        'Ariko ntugire ikibazo! You can still enjoy MUSHII',
-        'while waiting:',
-        '',
-        '🎵 .play <song name> — Play your favourite music.',
-        '',
-        '😂 .joke — Get a random joke.',
-        '',
-        '🧩 .riddle — Challenge your brain.',
-        '',
-        '💎 Type .menu to explore all MUSHII features.',
-        '',
-        'Enjoy your time! ❤️'
-    ].join('\n'));
-    assert.match(DEFAULT_REPLY, /🎵 \.play <song name> — Play your favourite music\./);
-    assert.match(DEFAULT_REPLY, /😂 \.joke — Get a random joke\./);
-    assert.match(DEFAULT_REPLY, /🧩 \.riddle — Challenge your brain\./);
-    assert.match(DEFAULT_REPLY, /💎 Type \.menu to explore all MUSHII features\./);
-    for (const command of ['play', 'joke', 'riddle', 'menu']) {
-        assert.ok(registeredCommands.has(command), `.${command} must be a registered command`);
-    }
-    assert.equal((DEFAULT_REPLY.match(/\.[a-z0-9]+ — .+$/gm) || []).length, 2);
-});
-
-test('does not send away replies for registered commands', () => {
-    assert.equal(isCommandMessage('.menu', '.', plugins), true);
-    assert.equal(isCommandMessage('.play Blinding Lights', '.', plugins), true);
-    assert.equal(isCommandMessage('!menu', '.,!', plugins), true);
-    assert.equal(isCommandMessage('menu', 'none', plugins), true);
-    assert.equal(isCommandMessage('hello there', '.', plugins), false);
-    assert.equal(isCommandMessage('hey MUSHII, tell me something', '.', plugins), true);
-});
-
-test('replies once per sender during cooldown and persists cooldown across restarts', async t => {
+test('uses a 30-second per-contact cooldown and persists it across restarts', async t => {
     const filePath = await createStatePath(t);
     let timestamp = 1_000_000;
-    const first = createAutoReply({ filePath, now: () => timestamp, generateReply: async () => 'AI generated test reply' });
+    const first = createAutoReply({
+        filePath,
+        now: () => timestamp,
+        generateReply: async () => 'Muraho neza. Nishimiye kukumva.'
+    });
     first.setEnabled(true);
     const sent = [];
-    const send = async content => sent.push(content.text);
     const message = {
         jid: 'contact@s.whatsapp.net',
         sender: 'contact@s.whatsapp.net',
-        text: 'Hi',
-        send
+        text: 'Muraho',
+        send: async content => {
+            sent.push(content.text);
+            return { key: { id: 'reply-1' } };
+        }
     };
 
+    assert.equal(COOLDOWN_MS, 30_000);
     assert.equal(await first.replyToMessage(message), true);
     assert.equal(await first.replyToMessage(message), false);
     assert.equal(sent.length, 1);
-    assert.equal(COOLDOWN_MS, 10_000, 'cooldown should be exactly 10 seconds');
 
-    const afterRestart = createAutoReply({ filePath, now: () => timestamp, generateReply: async () => 'AI generated test reply' });
-    assert.equal(afterRestart.isEnabled(), true);
+    const afterRestart = createAutoReply({
+        filePath,
+        now: () => timestamp,
+        generateReply: async () => 'Mwaramutse.'
+    });
     assert.equal(await afterRestart.replyToMessage(message), false);
-
     timestamp += COOLDOWN_MS - 1;
     assert.equal(await afterRestart.replyToMessage(message), false);
     timestamp += 1;
@@ -159,144 +61,213 @@ test('replies once per sender during cooldown and persists cooldown across resta
     assert.equal(sent.length, 2);
 });
 
-test('ignores groups, status, newsletters, bot messages, protocol messages, and owners', async t => {
+test('only accepts eligible private contacts and excludes groups, owner and protocol messages', async t => {
     const filePath = await createStatePath(t);
-    const autoReply = createAutoReply({ filePath, generateReply: async () => 'AI generated test reply' });
+    const autoReply = createAutoReply({ filePath, generateReply: async () => 'Muraho.' });
     autoReply.setEnabled(true);
     let sendCount = 0;
-    const send = async () => { sendCount++; };
+    const send = async () => {
+        sendCount++;
+        return { key: { id: String(sendCount) } };
+    };
 
     for (const context of [
         { jid: '123@g.us', isGroup: true },
         { jid: 'status@broadcast' },
         { jid: 'news@newsletter' },
+        { jid: 'owner@s.whatsapp.net', isOwner: true },
         { jid: 'bot@s.whatsapp.net', fromMe: true },
-        { jid: 'protocol@s.whatsapp.net', isProtocolMessage: true },
-        { jid: 'owner@s.whatsapp.net', isOwner: true }
+        { jid: 'contact@s.whatsapp.net', isProtocolMessage: true }
     ]) {
         assert.equal(await autoReply.replyToMessage({ ...context, send }), false);
     }
     assert.equal(sendCount, 0);
 });
 
-test('releases the cooldown when sending fails', async t => {
+test('conversation history is private per contact, bounded, expires, and ignores protected content', () => {
+    let timestamp = 10_000;
+    const history = createConversationHistory({ now: () => timestamp });
+    assert.equal(history.add({ jid: 'a@s.whatsapp.net', role: 'user', text: 'Nitwa Aline.' }), true);
+    assert.equal(history.add({ jid: 'b@s.whatsapp.net', role: 'user', text: 'Nitwa Keza.' }), true);
+    assert.equal(history.get('a@s.whatsapp.net')[0].text, 'Nitwa Aline.');
+    assert.equal(history.get('b@s.whatsapp.net')[0].text, 'Nitwa Keza.');
+
+    for (let i = 0; i < HISTORY_LIMIT + 3; i++) {
+        history.add({ jid: 'a@s.whatsapp.net', role: 'user', text: 'Ubutumwa ' + i, at: timestamp + i * 6000 });
+    }
+    assert.equal(history.get('a@s.whatsapp.net').length, HISTORY_LIMIT);
+
+    assert.equal(history.recordMessage({
+        key: { remoteJid: '123@g.us', id: 'group' },
+        message: { conversation: 'private content should not be stored' }
+    }, 'private content should not be stored'), false);
+    assert.equal(history.recordMessage({
+        key: { remoteJid: 'a@s.whatsapp.net', id: 'view-once' },
+        message: { viewOnceMessageV2: { message: { imageMessage: {} } } }
+    }, 'view-once image'), false);
+    assert.equal(history.get('a@s.whatsapp.net').some(item => item.text.includes('private content')), false);
+
+    timestamp += 12 * 60 * 60 * 1000 + 1;
+    assert.deepEqual(history.get('a@s.whatsapp.net'), []);
+});
+
+test('history captures both received messages and the owner’s manual private replies', () => {
+    const history = createConversationHistory();
+    const incoming = {
+        key: { remoteJid: 'contact@s.whatsapp.net', id: 'in-1', fromMe: false },
+        message: { conversation: 'Nitwa Aline.' }
+    };
+    const outgoing = {
+        key: { remoteJid: 'contact@s.whatsapp.net', id: 'out-1', fromMe: true },
+        message: { conversation: 'Muraho Aline, nagufasha iki?' }
+    };
+    assert.equal(history.recordMessage(incoming, 'Nitwa Aline.'), true);
+    assert.equal(history.recordMessage(outgoing, 'Muraho Aline, nagufasha iki?'), true);
+    assert.deepEqual(history.get('contact@s.whatsapp.net').map(item => item.role), ['user', 'outgoing']);
+    assert.equal(history.recordMessage(outgoing, 'Muraho Aline, nagufasha iki?'), false);
+});
+
+test('prompt uses prior chat context, asks for polished Kinyarwanda, and supports manual handoff', () => {
+    const prompt = buildAutoReplyPrompt('Ese uracyabyibuka?', [
+        { role: 'user', text: 'Nitwa Aline kandi mba i Huye.' },
+        { role: 'outgoing', text: 'Muraho Aline. Wavuze ko uba i Huye.' },
+        { role: 'user', text: 'Ese uracyabyibuka?' }
+    ]);
+    assert.match(prompt, /clear, correct, polished, natural Kinyarwanda/);
+    assert.match(prompt, /Aline kandi mba i Huye/);
+    assert.match(prompt, /MUSHII AI/);
+    assert.match(prompt, /"action":"manual"/);
+    assert.doesNotMatch(prompt, /Latest message[\s\S]*Latest message/);
+    assert.doesNotMatch(prompt, /How can I help you today\?/);
+});
+
+test('parses structured replies and routes sensitive matters to the human owner', () => {
+    assert.deepEqual(parseAIReply('{"action":"reply","reply":"Muraho neza."}'), {
+        action: 'reply',
+        reply: 'Muraho neza.'
+    });
+    assert.deepEqual(parseAIReply('{"action":"manual","reason":"Asaba nyirayo."}'), {
+        action: 'manual',
+        reason: 'Asaba nyirayo.'
+    });
+    assert.deepEqual(parseAIReply('MANUAL'), { action: 'manual', reason: '' });
+    assert.equal(parseAIReply('⚠️ AI servers are busy right now.'), null);
+});
+
+test('auto reply supplies recent history to the model and remembers its sent reply', async t => {
     const filePath = await createStatePath(t);
-    const autoReply = createAutoReply({ filePath, generateReply: async () => 'AI generated test reply' });
+    let capturedHistory = [];
+    const autoReply = createAutoReply({
+        filePath,
+        generateReply: async (text, jid, history) => {
+            capturedHistory = history;
+            return { action: 'reply', reply: 'Ndabyibuka, Aline. Wambwiye ko uba i Huye.' };
+        }
+    });
+    autoReply.setEnabled(true);
+    autoReply.recordConversationMessage({
+        key: { remoteJid: 'contact@s.whatsapp.net', id: 'old-in', fromMe: false },
+        message: { conversation: 'Nitwa Aline kandi mba i Huye.' }
+    }, 'Nitwa Aline kandi mba i Huye.');
+
+    const sent = [];
+    const result = await autoReply.replyToMessage({
+        jid: 'contact@s.whatsapp.net',
+        sender: 'contact@s.whatsapp.net',
+        text: 'Ese uracyabyibuka?',
+        send: async content => {
+            sent.push(content.text);
+            return { key: { id: 'ai-reply-1' } };
+        }
+    });
+    assert.equal(result, true);
+    assert.equal(capturedHistory[0].text, 'Nitwa Aline kandi mba i Huye.');
+    assert.match(sent[0], /Aline/);
+    assert.equal(autoReply.getConversationHistory('contact@s.whatsapp.net').at(-1).role, 'outgoing');
+});
+
+test('manual handoff stays silent to the contact and notifies the owner', async t => {
+    const filePath = await createStatePath(t);
+    const autoReply = createAutoReply({
+        filePath,
+        generateReply: async () => ({ action: 'manual', reason: 'Asaba kwishyura.' })
+    });
+    autoReply.setEnabled(true);
+    let contactMessages = 0;
+    const notices = [];
+
+    const context = {
+        jid: 'contact@s.whatsapp.net',
+        sender: 'contact@s.whatsapp.net',
+        text: 'Ndashaka ko nyirayo ansubiza ku bijyanye no kwishyura.',
+        send: async () => {
+            contactMessages++;
+            return { key: { id: 'should-not-send' } };
+        },
+        notifyOwner: async detail => notices.push(detail)
+    };
+
+    assert.equal(await autoReply.replyToMessage(context), false);
+    assert.equal(contactMessages, 0);
+    assert.equal(notices.length, 1);
+    assert.equal(notices[0].reason, 'Asaba kwishyura.');
+    assert.equal(await autoReply.replyToMessage(context), false);
+    assert.equal(notices.length, 1);
+});
+
+test('failed generation releases cooldown so a later message can be answered', async t => {
+    const filePath = await createStatePath(t);
+    let calls = 0;
+    const autoReply = createAutoReply({
+        filePath,
+        generateReply: async () => {
+            calls++;
+            return calls === 1 ? null : { action: 'reply', reply: 'Muraho.' };
+        }
+    });
     autoReply.setEnabled(true);
     const message = {
         jid: 'contact@s.whatsapp.net',
-        send: async () => { throw new Error('send failed'); }
+        text: 'Muraho',
+        send: async () => ({ key: { id: 'reply-ok' } })
     };
 
-    await assert.rejects(autoReply.replyToMessage(message), /send failed/);
-    assert.equal(await autoReply.replyToMessage({
-        ...message,
-        send: async () => {}
-    }), true);
+    assert.equal(await autoReply.replyToMessage(message), false);
+    assert.equal(await autoReply.replyToMessage(message), true);
 });
 
-test('away command is owner-only and persists on/off controls', async t => {
+test('away command remains owner-only and off clears temporary chat memory', async t => {
     const filePath = await createStatePath(t);
     const autoReply = createAutoReply({ filePath });
     const away = awayTest.createAwayPlugin(autoReply);
     const replies = [];
-    const context = {
-        isOwner: false,
-        reply: async text => replies.push(text)
-    };
+    const context = { isOwner: false, reply: async text => replies.push(text) };
 
     await away.run({}, {}, ['on'], context);
-    assert.equal(autoReply.isEnabled(), true);
+    assert.equal(autoReply.isEnabled(), false);
     assert.match(replies.pop(), /Only the bot owner/);
 
     context.isOwner = true;
     await away.run({}, {}, ['on'], context);
     assert.equal(autoReply.isEnabled(), true);
-    assert.equal(createAutoReply({ filePath }).isEnabled(), true);
-    assert.match(replies.pop(), /Auto Reply is ON/);
+    assert.match(replies.pop(), /30-second per-contact cooldown/);
+
+    away.recordConversationMessage({
+        key: { remoteJid: 'contact@s.whatsapp.net', id: 'memory', fromMe: false },
+        message: { conversation: 'Private chat.' }
+    }, 'Private chat.');
+    assert.equal(autoReply.getConversationHistory('contact@s.whatsapp.net').length, 1);
 
     await away.run({}, {}, ['off'], context);
     assert.equal(autoReply.isEnabled(), false);
-    assert.equal(createAutoReply({ filePath }).isEnabled(), false);
-    assert.match(replies.pop(), /Auto Reply is OFF/);
+    assert.deepEqual(autoReply.getConversationHistory('contact@s.whatsapp.net'), []);
+    assert.match(replies.pop(), /memory has been cleared/);
 });
 
-test('automatic reply does not block the normal .menu command', async t => {
-    const filePath = await createStatePath(t);
-    const awayIndex = plugins.findIndex(plugin => plugin.commands?.includes('away'));
-    assert.notEqual(awayIndex, -1);
-    const originalAwayPlugin = plugins[awayIndex];
-    plugins[awayIndex] = awayTest.createAwayPlugin(createAutoReply({ filePath, generateReply: async () => 'AI generated test reply' }));
-
-    const sent = [];
-    const sock = {
-        sendMessage: async (jid, content) => {
-            sent.push({ jid, content });
-            return { key: { id: `away-test-${sent.length}` } };
-        },
-        sendPresenceUpdate: async () => {}
-    };
-    const message = (id, jid, text, fromMe = false) => ({
-        key: { id, remoteJid: jid, fromMe },
-        message: { conversation: text }
-    });
-
-    try {
-        await handleMessages(sock, message('away-on', 'owner@s.whatsapp.net', '.away on', true));
-        await handleMessages(sock, message('menu-request', 'contact@s.whatsapp.net', '.menu'));
-        await handleMessages(sock, message('plain-message', 'another-contact@s.whatsapp.net', 'hello there'));
-
-        assert.match(sent[1].content.text, /MUSHII ELITE/);
-        assert.equal(sent[2].content.text, 'AI generated test reply');
-    } finally {
-        plugins[awayIndex] = originalAwayPlugin;
-    }
-});
-
-test('premium menu includes every existing command with exact syntax', async () => {
-    let result;
-    await menuPlugin.run({}, {}, [], { command: 'menu', reply: async text => { result = text; } });
-    assert.match(result, /^\*MUSHII ELITE\*/);
-    assert.match(result, /\*🎮 GAMES & FUN\*/);
-    assert.match(result, /\*🎵 MUSIC & VIDEO\*/);
-    assert.match(result, /\*💎 QUICK START\*/);
-    assert.match(result, /```[\s\S]*\.play Basara Zuba Ray[\s\S]*```/);
-    assert.doesNotMatch(result, /[╭╮╰╯═━]/);
-    assert.doesNotMatch(result, /&#x20;|&#\d+;/);
-
-    for (const syntax of [
-        '.joke', '.truth', '.dare', '.riddle', '.8ball <question>',
-        '.ship <name> and <name>', '.rps <rock|paper|scissors>', '.dice [sides]',
-        '.trivia', '.compliment', '.play <song or YouTube link>',
-        '.ytmp3 <YouTube link>', '.ytmp4 <YouTube link>',
-        '.download <public media link> [mp3|mp4]'
-    ]) {
-        assert.ok(result.includes(`\`${syntax}\``), `Menu must include ${syntax}`);
-    }
-
-    for (const command of ['joke', 'truth', 'dare', 'riddle', '8ball', 'ship', 'rps', 'dice',
-        'trivia', 'compliment', 'play', 'ytmp3', 'ytmp4', 'download']) {
-        assert.ok(registeredCommands.has(command), `.${command} must remain registered`);
-    }
-});
-
-test('AI auto reply uses the generated answer, not a canned greeting', async t => {
-    const filePath = await createStatePath(t);
-    let received = '';
-    const autoReply = createAutoReply({
-        filePath,
-        generateReply: async text => {
-            received = text;
-            return 'Ni meza, nagufasha iki uyu munsi?';
-        }
-    });
-    autoReply.setEnabled(true);
-    let sent;
-    await autoReply.replyToMessage({
-        jid: 'contact@s.whatsapp.net',
-        text: 'Muraho, wambwira uko nakoresha bot?',
-        send: async content => { sent = content.text; }
-    });
-    assert.equal(received, 'Muraho, wambwira uko nakoresha bot?');
-    assert.equal(sent, 'Ni meza, nagufasha iki uyu munsi?');
+test('registered commands are not treated as conversation prompts', () => {
+    const plugins = [{ commands: ['menu', 'play', 'joke'] }];
+    assert.equal(isCommandMessage('.menu', '.', plugins), true);
+    assert.equal(isCommandMessage('!play music', '.,!', plugins), true);
+    assert.equal(isCommandMessage('hey MUSHII, tell me something', '.', plugins), true);
+    assert.equal(isCommandMessage('Muraho neza', '.', plugins), false);
 });
