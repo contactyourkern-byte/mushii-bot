@@ -27,11 +27,11 @@ Use `.help <command>` for command details.
 
 ## AI auto-reply (owner controlled)
 
+- Automatic replies are ON by default on a fresh install; `.away` checks the current setting.
 - `.away on`: enable AI-generated replies to incoming private WhatsApp messages.
 - `.away off`: disable automatic replies.
-- `.away`: check the current setting and usage.
 
-Replies use the message language where possible, are generated from the actual incoming text, and use the existing no-key AI service first. An optional `OPENROUTER_API_KEY` can enable OpenRouter's free-model router (`OPENROUTER_MODEL=openrouter/free`) as the first provider. OpenRouter free models have availability and rate limits; this is not unlimited guaranteed hosting. If all free providers are unavailable, the bot does not send a canned reply. Auto-reply ignores groups, the owner, commands, and protocol messages, and applies a per-contact 60-second cooldown. Conversations use the existing Agent v2 chat history; keep in mind messages are sent to whichever external AI provider handles the request.
+Replies use the message language where possible and are generated from the actual incoming text. When `OPENROUTER_API_KEY` is set, OpenRouter is tried first (`OPENROUTER_MODEL=openrouter/free` by default); existing ch.at and Pollinations providers are fallbacks. OpenRouter free models have availability and rate limits; this is not unlimited guaranteed hosting. If all free providers are unavailable, the bot does not send a canned reply. Auto-reply ignores groups, the owner, commands, and protocol messages, and applies a per-contact 60-second cooldown. Messages may be sent to the external AI provider handling the request.
 
 ## Documentary research (owner only)
 
