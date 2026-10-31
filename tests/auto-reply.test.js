@@ -74,6 +74,48 @@ test('registers owner-only personal footer template command without removing exi
     }
 });
 
+
+test('fixed away message bypasses AI, persists separately, and can switch back to AI mode', async t => {
+    const filePath = await createStatePath(t);
+    const fixedMessagePath = path.join(path.dirname(filePath), 'fixed-message.json');
+    let aiCalls = 0;
+    const autoReply = createAutoReply({
+        filePath,
+        fixedMessagePath,
+        generateReply: async () => {
+            aiCalls += 1;
+            return { action: 'reply', reply: 'This should not be sent.' };
+        }
+    });
+    autoReply.setEnabled(true);
+    const saved = autoReply.setFixedMessage("I'm not available right now. I'm sleeping; I'll reply when I'm back.");
+    assert.equal(saved.enabled, true);
+
+    let sent = '';
+    assert.equal(await autoReply.replyToMessage({
+        jid: 'fixed-contact@s.whatsapp.net',
+        text: 'Hello',
+        send: async content => { sent = content.text; return { key: { id: 'fixed-reply' } }; }
+    }), true);
+    assert.equal(aiCalls, 0);
+    assert.match(sent, /I'm not available right now/);
+    assert.match(sent, /MUSHII AI/);
+
+    const restarted = createAutoReply({ filePath, fixedMessagePath });
+    assert.equal(restarted.getFixedMessage().enabled, true);
+    assert.equal(restarted.getFixedMessage().text, saved.text);
+    restarted.setFixedMessageEnabled(false);
+    assert.equal(restarted.getFixedMessage().enabled, false);
+    assert.equal(restarted.setFixedMessage('I am away').enabled, true);
+});
+
+test('registers fixed away message command without removing scheduler commands', () => {
+    const commands = new Set(loadedPlugins.flatMap(plugin => plugin.commands || []));
+    for (const command of ['awaymessage', 'autoreply', 'awaymsg', 'setaway', 'awayoff']) {
+        assert.ok(commands.has(command), 'Expected command .' + command + ' to remain registered');
+    }
+});
+
 test('uses a 15-second per-contact cooldown and persists it across restarts', async t => {
     const filePath = await createStatePath(t);
     let timestamp = 1_000_000;
