@@ -5,7 +5,7 @@ const R = require('../lib/research-engine');
 const Agent = require('../lib/agent-v2');
 
 function ownerDestination(ctx) {
-    const configuredOwner = String(process.env.OWNER_NUMBER || config.OWNER_NUMBER || '').replace(/\\D/g, '');
+    const configuredOwner = String(process.env.OWNER_NUMBER || config.OWNER_NUMBER || '').replace(/\D/g, '');
     if (!configuredOwner) throw Error('Set OWNER_NUMBER in private host settings.');
     if (!ctx?.isOwner) throw Error('This research command is owner-only.');
     if (ctx.isGroup || !ctx.jid || String(ctx.jid).endsWith('@g.us')) {
@@ -17,7 +17,7 @@ function ownerDestination(ctx) {
 }
 
 async function send(sock, jid, text, ctx) {
-    const chunks = String(text || '').match(/[\\s\\S]{1,3500}/g) || [''];
+    const chunks = String(text || '').match(/[\s\S]{1,3500}/g) || [''];
     for (const part of chunks) {
         if (typeof ctx?.safeSend === 'function') {
             await ctx.safeSend({ text: part });
@@ -38,7 +38,7 @@ function narrationPrompt(topic, result) {
             lines.push('- Reference lead: ' + source.title + ' | ' + source.url);
         }
     }
-    const evidence = lines.join('\\n').slice(0, 2600);
+    const evidence = lines.join('\n').slice(0, 2600);
     return [
         'Write a cinematic 8–10 minute YouTube documentary narration in fluent, natural spoken Kinyarwanda for MUSHII: African Stories & Entertainment.',
         'Topic: ' + topic,
@@ -48,7 +48,7 @@ function narrationPrompt(topic, result) {
         'Cite source URLs in a short source note at the end. Do not claim a source proves something unless its content was actually checked.',
         'Research leads from the latest scan:',
         evidence
-    ].join('\\n').slice(0, 4700);
+    ].join('\n').slice(0, 4700);
 }
 
 module.exports = {
@@ -68,8 +68,8 @@ module.exports = {
 
             if (action === 'help') {
                 const help = p === 'kern'
-                    ? '*KERN*\\n.kern scan [topic]\\n.kern ideas\\n.kern analyze <topic>\\n.kern export\\nSeven clusters include cybercrime, all three luxury pillars, strange science, history and human extremes.'
-                    : '*MUSHII*\\n.mushii scan [topic]\\n.mushii ideas\\n.mushii script <topic>\\nFive African story clusters.';
+                    ? '*KERN*\n.kern scan [topic]\n.kern ideas\n.kern analyze <topic>\n.kern export\nSeven clusters include cybercrime, all three luxury pillars, strange science, history and human extremes.'
+                    : '*MUSHII*\n.mushii scan [topic]\n.mushii ideas\n.mushii script <topic>\nFive African story clusters.';
                 return send(sock, jid, help, ctx);
             }
 
@@ -106,12 +106,12 @@ module.exports = {
                 const generated = await Agent.runAgent(narrationPrompt(topic, result), ctx);
                 const narration = String(generated?.text || '').trim();
                 if (!narration) throw Error('The existing no-key writing service returned an empty response.');
-                return send(sock, jid, '🇷🇼 *MUSHII KINYARWANDA NARRATION*\\n' + narration, ctx);
+                return send(sock, jid, '🇷🇼 *MUSHII KINYARWANDA NARRATION*\n' + narration, ctx);
             }
             return send(sock, jid, R.report(result), ctx);
         } catch (error) {
             const safe = String(error.message || error)
-                .replace(/(key|token|authorization)\\s*[:=]\\s*\\S+/gi, '$1=[redacted]')
+                .replace(/(key|token|authorization)\s*[:=]\s*\S+/gi, '$1=[redacted]')
                 .slice(0, 240);
             if (jid) return send(sock, jid, '⚠️ Research failed: ' + safe, ctx);
             throw error;
