@@ -17,7 +17,7 @@ async function callGemini(prompt, timeoutMs = 4000, maxOutputTokens = 450) {
             {
                 contents: [{ role: 'user', parts: [{ text: String(prompt || '').slice(0, 7000) }] }],
                 generationConfig: {
-                    temperature: 0.45,
+                    thinkingConfig: { thinkingLevel: 'low' },
                     maxOutputTokens
                 }
             },
@@ -50,7 +50,8 @@ async function callGroq(prompt, timeoutMs = 3500, maxTokens = 450) {
         model,
         messages: [{ role: 'user', content: String(prompt || '').slice(0, 7000) }],
         temperature: 0.45,
-        max_completion_tokens: maxTokens
+        max_completion_tokens: maxTokens,
+        include_reasoning: false
     };
     if (model.startsWith('openai/gpt-oss-')) request.reasoning_effort = 'low';
 
