@@ -17,6 +17,7 @@ const {
 } = require('../lib/auto-reply');
 const { __test: awayTest } = require('../plugins/away');
 const { plugins: loadedPlugins } = require('../handler');
+const { firstAvailable } = require('../plugins/ai2');
 
 async function createStatePath(t) {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mushii-away-test-'));
@@ -281,4 +282,83 @@ test('keeps all away and scheduled auto-reply commands registered', () => {
     for (const command of ['away', 'autoreply', 'awaymsg', 'setaway', 'awayoff']) {
         assert.ok(commands.has(command), 'Expected auto-reply command .' + command + ' to remain registered');
     }
+});
+
+
+test('starts typing before generating the first AI reply and stops after sending', async t => {
+    const filePath = await createStatePath(t);
+    const events = [];
+    const autoReply = createAutoReply({
+        filePath,
+        generateReply: async () => {
+            events.push('generate');
+            return { action: 'reply', reply: 'Muraho neza.' };
+        }
+    });
+    autoReply.setEnabled(true);
+    const sent = await autoReply.replyToMessage({
+        jid: 'contact@s.whatsapp.net',
+        text: 'Muraho',
+        onStart: async () => events.push('typing'),
+        onFinish: async () => events.push('paused'),
+        send: async () => {
+            events.push('send');
+            return { key: { id: 'reply' } };
+        }
+    });
+    assert.equal(sent, true);
+    assert.deepEqual(events, ['typing', 'generate', 'send', 'paused']);
+});
+
+test('starts the cooldown only after the generated reply is sent', async t => {
+    const filePath = await createStatePath(t);
+    let timestamp = 1000;
+    let generationCount = 0;
+    const autoReply = createAutoReply({
+        filePath,
+        now: () => timestamp,
+        generateReply: async () => {
+            generationCount++;
+            timestamp += 20_000;
+            return { action: 'reply', reply: 'Igisubizo.' };
+        }
+    });
+    autoReply.setEnabled(true);
+    const message = {
+        jid: 'contact@s.whatsapp.net',
+        text: 'Muraho',
+        send: async () => ({ key: { id: 'reply-' + generationCount } })
+    };
+
+    assert.equal(await autoReply.replyToMessage(message), true);
+    assert.equal(await autoReply.replyToMessage(message), false);
+    assert.equal(generationCount, 1);
+});
+
+test('uses the first valid AI provider answer instead of waiting for slower providers', async () => {
+    const started = Date.now();
+    const result = await firstAvailable([
+        async () => {
+            await new Promise(resolve => setTimeout(resolve, 15));
+            return null;
+        },
+        async () => {
+            await new Promise(resolve => setTimeout(resolve, 25));
+            return 'fast valid answer';
+        },
+        async () => {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            return 'slow answer';
+        }
+    ], 500);
+    assert.equal(result, 'fast valid answer');
+    assert.ok(Date.now() - started < 90, 'first valid answer should win without waiting for slow providers');
+});
+
+test('skips generic AI provider busy placeholders and continues to the next provider', async () => {
+    const result = await firstAvailable([
+        async () => '⚠️ AI servers are busy right now. Please try again in a moment.',
+        async () => 'Igisubizo cyiza.'
+    ], 500);
+    assert.equal(result, 'Igisubizo cyiza.');
 });

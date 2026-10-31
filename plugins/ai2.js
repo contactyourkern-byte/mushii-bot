@@ -7,12 +7,12 @@ const { fmt } = require('../lib/theme');
 //    giftedtech (ENOTFOUND), lance-frank (dead), letmegpt (400), paxsenix (ENOTFOUND)
 // ── Live: ch.at (~400ms), pollinations.ai text (~3-5s)
 
-async function callChAt(prompt, retries = 3) {
+async function callChAt(prompt, retries = 3, timeoutMs = 7000) {
     for (let i = 1; i <= retries; i++) {
         try {
             const res = await axios.post('https://ch.at/api/chat',
                 { message: prompt },
-                { headers: { 'Content-Type': 'application/json', 'User-Agent': 'MUSHII-Bot/2.0' }, timeout: 12000 }
+                { headers: { 'Content-Type': 'application/json', 'User-Agent': 'MUSHII-Bot/2.0' }, timeout: timeoutMs }
             );
             const t = res.data?.answer || res.data?.reply || res.data?.message || res.data?.response || res.data?.result;
             if (t && String(t).trim().length > 2) return String(t).trim();
@@ -22,28 +22,28 @@ async function callChAt(prompt, retries = 3) {
     return null;
 }
 
-async function callPollinations(prompt) {
+async function callPollinations(prompt, timeoutMs = 7000) {
     try {
         const res = await axios.get(
-            'https://text.pollinations.ai/' + encodeURIComponent(prompt.slice(0, 500)) +
+            'https://text.pollinations.ai/' + encodeURIComponent(String(prompt || '').slice(0, 3500)) +
             '?model=openai&seed=' + (Date.now() % 9999),
-            { timeout: 18000 }
+            { timeout: timeoutMs }
         );
         return typeof res.data === 'string' ? res.data.trim() : null;
     } catch { return null; }
 }
 
 
-async function callOpenRouter(prompt) {
+async function callOpenRouter(prompt, timeoutMs = 7000, maxTokens = 450) {
     const key = String(process.env.OPENROUTER_API_KEY || '').trim();
     if (!key) return null;
     const model = process.env.OPENROUTER_MODEL || 'openrouter/free';
     try {
         const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
             model,
-            messages: [{ role: 'user', content: String(prompt).slice(0, 5000) }],
+            messages: [{ role: 'user', content: String(prompt).slice(0, 7000) }],
             temperature: 0.45,
-            max_tokens: 900
+            max_tokens: maxTokens
         }, {
             headers: {
                 Authorization: 'Bearer ' + key,
@@ -51,7 +51,7 @@ async function callOpenRouter(prompt) {
                 'HTTP-Referer': 'https://github.com/contactyourkern-byte/mushii-bot',
                 'X-Title': 'MUSHII AI Auto Reply'
             },
-            timeout: 18000
+            timeout: timeoutMs
         });
         const answer = response.data?.choices?.[0]?.message?.content;
         return typeof answer === 'string' && answer.trim() ? answer.trim() : null;
@@ -59,6 +59,39 @@ async function callOpenRouter(prompt) {
         console.warn('[AI] OpenRouter free model unavailable; trying no-key providers:', error.message);
         return null;
     }
+}
+
+async function firstAvailable(tasks, timeoutMs = 7000) {
+    let timer;
+    const providers = Promise.any(tasks.map(task => Promise.resolve()
+        .then(task)
+        .then(answer => {
+            const value = typeof answer === 'string' ? answer.trim() : '';
+            if (value.length > 2
+                && !/^(?:⚠️\\s*)?(?:AI servers are busy|service unavailable|temporarily unavailable|rate limit)/i.test(value)) {
+                return value;
+            }
+            throw new Error('Provider returned no usable answer');
+        })));
+    const timeout = new Promise(resolve => {
+        timer = setTimeout(() => resolve(null), timeoutMs);
+    });
+    try {
+        return await Promise.race([providers, timeout]);
+    } catch {
+        return null;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+async function askAIFast(prompt, timeoutMs = 7000) {
+    const input = String(prompt || '').slice(0, 7000);
+    return firstAvailable([
+        () => callChAt(input, 1, timeoutMs),
+        () => callOpenRouter(input, timeoutMs, 450),
+        () => callPollinations(input, timeoutMs)
+    ], timeoutMs);
 }
 
 async function askAI(prompt) {
@@ -124,3 +157,5 @@ const plugins = [
 
 module.exports = plugins;
 module.exports.askAI = askAI;
+module.exports.askAIFast = askAIFast;
+module.exports.firstAvailable = firstAvailable;

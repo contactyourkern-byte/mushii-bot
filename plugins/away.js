@@ -24,6 +24,8 @@ function createAwayPlugin(autoReply = createAutoReply()) {
             fromMe: message?.key?.fromMe,
             isProtocolMessage: context.isProtocolMessage,
             notifyOwner: context.notifyOwner,
+            onStart: () => sock.sendPresenceUpdate?.('composing', context.jid),
+            onFinish: () => sock.sendPresenceUpdate?.('paused', context.jid),
             send: content => context.safeSend
                 ? context.safeSend(content, { quoted: message })
                 : sock.sendMessage(context.jid, content, { quoted: message })
