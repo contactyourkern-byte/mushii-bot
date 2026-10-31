@@ -5,7 +5,7 @@ const { createAutoReply } = require('../lib/auto-reply');
 function createAwayPlugin(autoReply = createAutoReply()) {
     return {
         commands: ['away', 'awaymute', 'awayunmute', 'awaymuted', 'awaytemplate', 'awaymessage'],
-        description: 'Toggle professional AI-generated automatic private-message replies while away',
+        description: 'Toggle fixed or AI-generated automatic private-message replies while away',
         usage: '.away on | .away off',
         permission: 'owner',
         group: false,
@@ -56,9 +56,9 @@ function createAwayPlugin(autoReply = createAutoReply()) {
                     const text = args.slice(1).join(' ').trim();
                     try {
                         const saved = autoReply.setFixedMessage(text);
-                        return context.reply('✅ *Fixed away message saved and enabled.*\\n\\n' + saved.text + '\\n\\nContacts will receive this same message while `.away on` is active. Use `.awaymessage ai` to switch back to AI replies.');
+                        return context.reply('✅ *Fixed away message saved and enabled.*\n\n' + saved.text + '\n\nContacts will receive this same message while `.away on` is active. Use `.awaymessage ai` to switch back to AI replies.');
                     } catch (error) {
-                        return context.reply('⚠️ ' + error.message + '\\nUsage: .awaymessage set <your message>');
+                        return context.reply('⚠️ ' + error.message + '\nUsage: .awaymessage set <your message>');
                     }
                 }
                 if (action === 'ai') {
@@ -68,10 +68,10 @@ function createAwayPlugin(autoReply = createAutoReply()) {
                 if (action === 'show') {
                     const current = autoReply.getFixedMessage();
                     return context.reply(current.enabled
-                        ? '📩 *Fixed away message is ON:*\\n\\n' + current.text + '\\n\\nUse `.awaymessage ai` to switch back to AI replies.'
+                        ? '📩 *Fixed away message is ON:*\n\n' + current.text + '\n\nUse `.awaymessage ai` to switch back to AI replies.'
                         : 'ℹ️ Fixed away message is OFF. MUSHII is using AI replies. Set one with `.awaymessage set <message>`.');
                 }
-                return context.reply('Commands:\\n.awaymessage set <message>\\n.awaymessage show\\n.awaymessage ai');
+                return context.reply('Commands:\n.awaymessage set <message>\n.awaymessage show\n.awaymessage ai');
             }
 
 
