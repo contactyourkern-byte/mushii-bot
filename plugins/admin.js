@@ -25,7 +25,7 @@ function collectRemainingCommands(plugins = []) {
     const rank = { owner: 0, admin: 1, public: 2 };
     return [...entries.values()].sort((a, b) =>
         (rank[a.permission] ?? 3) - (rank[b.permission] ?? 3)
-        || a.command.localeCompare(b.command)
+        || a.command.localeCompare(b.command, undefined, { numeric: true })
     );
 }
 
@@ -36,7 +36,7 @@ function buildAdminMenu(plugins, page = 1, prefix = '.') {
     const visible = entries.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
     const lines = [
         '*⚙️ MUSHII ADMIN COMMAND DIRECTORY*',
-        '_Owner-only directory · commands not shown in the standard .menu_',
+        '_Owner-only directory · commands not shown in the standard command menu_',
         '',
         ...visible.map(item => {
             const icon = item.permission === 'owner' ? '👑' : item.permission === 'admin' ? '🛡️' : '🌍';
