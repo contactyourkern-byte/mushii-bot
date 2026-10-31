@@ -147,6 +147,7 @@ test('awaymessage command is owner-only and switches between fixed and AI replie
 
 
 test('admin menu dynamically lists all commands outside the normal menu and is owner-only', async () => {
+    assert.ok(loadedPlugins.some(plugin => plugin.commands?.includes('admin')), 'admin plugin must be auto-loaded');
     const samplePlugins = [
         { commands: ['menu', 'help', 'commands'], permission: 'public', description: 'Standard menu' },
         { commands: ['admin'], permission: 'owner', description: 'Admin directory' },
