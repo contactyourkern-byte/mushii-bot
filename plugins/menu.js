@@ -73,5 +73,5 @@ module.exports = {
         return ctx.reply(buildMenu());
     },
 
-    __test: { buildMenu }
+    __test: { buildMenu, menuCommands: [...new Set([...Object.keys(COMMAND_HELP), 'menu', 'help', 'commands'])] }
 };

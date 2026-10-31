@@ -25,6 +25,35 @@ MUSHII brings games, music search, and public-media downloads to WhatsApp chats.
 
 Use `.help <command>` for command details.
 
+## AI auto-reply (owner controlled)
+
+- Automatic replies are ON by default on a fresh install; `.away` checks the current setting.
+- `.away on`: enable AI-generated replies to incoming private WhatsApp messages.
+- `.away off`: disable automatic replies.
+
+Replies use the message language where possible and are generated from the actual incoming text. When `OPENROUTER_API_KEY` is set, OpenRouter is tried first (`OPENROUTER_MODEL=openrouter/free` by default); existing ch.at and Pollinations providers are fallbacks. OpenRouter free models have availability and rate limits; this is not unlimited guaranteed hosting. If all free providers are unavailable, the bot does not send a canned reply. Auto-reply ignores groups, the owner, commands, and protocol messages, and applies a per-contact 60-second cooldown. Messages may be sent to the external AI provider handling the request.
+
+## Documentary research (owner only)
+
+- `.kern scan` / `.kern scan <topic>`: KERN opportunity research.
+- `.kern ideas`: repeat the latest KERN scan.
+- `.kern analyze <topic>`: focused KERN research.
+- `.kern export`: send the latest KERN results as CSV.
+- `.mushii scan` / `.mushii scan <topic>`: MUSHII African-story research.
+- `.mushii ideas`: repeat the latest MUSHII scan.
+- `.mushii script <topic>`: research and draft a Kinyarwanda narration.
+
+KERN covers cybercrime, Logistics of Luxury, Luxury Industry & Business, Luxury Lifestyle & Wealth, strange science/technology, forgotten history, and human extremes. The three luxury pillars are separate research clusters. MUSHII covers African kingdoms, people, mysteries/heritage, culture/entertainment, and innovation/science.
+
+Research commands are owner-only and private-chat-only. Reports and exports are sent to `OWNER_NUMBER` in a private WhatsApp message, not to the originating group. Keep owner number and API keys in private host configuration, never Git. Research data is saved under ignored `data/`.
+
+Optional free research providers:
+- YouTube Data API with `YOUTUBE_API_KEY` (or `GOOGLE_API_KEY`); local safety limit defaults to 20 search calls per Pacific Time day. Without a key, the existing `yt-search` dependency is used as a fallback.
+- Wikipedia and GDELT for supporting reference discovery. Search results are leads, not proof; verify facts independently.
+- Kinyarwanda narration uses the bot's existing Agent v2 no-key `ch.at` route when no `AGENT_API_KEY` is configured. No new API key is required for this path; it depends on the external no-key service being reachable and available.
+
+Scores are editorial heuristics. This initial release uses each cluster's median view count as its comparison baseline and marks confidence low; it does not yet calculate true channel-specific medians.
+
 ## Setup
 
 1. Use Node.js 24.x.
@@ -36,7 +65,7 @@ Never commit `config.env`, session data, authentication files, passwords, or tok
 
 ## Privacy
 
-MUSHII does not open, forward, or otherwise bypass WhatsApp View Once messages. When a contact deletes a message in a one-to-one chat, MUSHII privately alerts the owner with the sender and deletion time, then forwards the original message when it is available. The in-memory cache is limited to 500 private incoming messages and expires after 24 hours; group messages are not cached or monitored. Messages sent by the owner, disappearing messages, and View Once messages are never forwarded. Automatic greetings are private-chat only and limited to three successful replies to a contact in any rolling 24-hour period. No automatic greeting, welcome, goodbye, or other passive bot response is sent into groups; group commands remain available.
+MUSHII does not open, forward, or otherwise bypass WhatsApp View Once messages. When a contact deletes a message in a one-to-one chat, MUSHII privately alerts the owner with the sender and deletion time, then forwards the original message when it is available. The in-memory cache is limited to 500 private incoming messages and expires after 24 hours; group messages are not cached or monitored. Messages sent by the owner, disappearing messages, and View Once messages are never forwarded. AI auto-replies are private-chat only, ignore commands and the owner, and are limited by a 60-second per-contact cooldown. No automatic greeting, welcome, goodbye, or other passive bot response is sent into groups; group commands remain available.
 
 ## Configuration
 
