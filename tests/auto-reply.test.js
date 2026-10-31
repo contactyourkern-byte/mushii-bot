@@ -652,3 +652,59 @@ test('registers owner-only per-contact away mute commands', () => {
         assert.ok(commands.has(command), 'Expected per-contact Away command .' + command + ' to be registered');
     }
 });
+
+
+test('status reaction uses the resolved phone JID for LID-based status authors', async () => {
+    const config = require('../config');
+    const { handleStatusBroadcast } = require('../lib/statusManager');
+    const oldFlags = global.autoStatusFlags;
+    const oldSeen = config.AUTO_STATUS_SEEN;
+    const oldReact = config.AUTO_STATUS_REACT;
+    const sends = [];
+    global.autoStatusFlags = { seen: false, react: true };
+    config.AUTO_STATUS_SEEN = false;
+    config.AUTO_STATUS_REACT = true;
+
+    const status = {
+        key: {
+            id: 'mushii-status-reaction-lid-test',
+            remoteJid: 'status@broadcast',
+            participant: '12345@lid',
+            participantPn: '254700123456@s.whatsapp.net',
+            fromMe: false,
+        },
+        message: { imageMessage: { caption: 'test status' } },
+    };
+
+    try {
+        await handleStatusBroadcast({ sendMessage: async (...args) => sends.push(args) }, status);
+        assert.equal(sends.length, 1);
+        assert.equal(sends[0][0], 'status@broadcast');
+        assert.deepEqual(sends[0][2], { statusJidList: ['254700123456@s.whatsapp.net'] });
+        assert.equal(sends[0][1].react.key.remoteJid, 'status@broadcast');
+        assert.equal(sends[0][1].react.key.participant, '254700123456@s.whatsapp.net');
+        assert.equal(sends[0][1].react.key.fromMe, false);
+        assert.equal(sends[0][1].react.key.participantPn, undefined);
+    } finally {
+        global.autoStatusFlags = oldFlags;
+        config.AUTO_STATUS_SEEN = oldSeen;
+        config.AUTO_STATUS_REACT = oldReact;
+    }
+});
+
+test('status unwrapping supports ephemeral and view-once wrappers', () => {
+    const { unwrapStatus } = require('../lib/statusManager');
+    const result = unwrapStatus({
+        message: {
+            viewOnceMessageV2: {
+                message: {
+                    ephemeralMessage: {
+                        message: { imageMessage: { caption: 'wrapped status' } },
+                    },
+                },
+            },
+        },
+    });
+    assert.equal(result.msgType, 'imageMessage');
+    assert.equal(result.inner.imageMessage.caption, 'wrapped status');
+});
