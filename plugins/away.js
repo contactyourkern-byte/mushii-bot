@@ -38,7 +38,7 @@ function createAwayPlugin(autoReply = createAutoReply()) {
                     'Auto Reply is currently *' + (autoReply.isEnabled() ? 'ON' : 'OFF') + '*.\n\n' +
                     'AI replies use recent private-chat context, polished language, and a 30-second per-contact cooldown.\n' +
                     'Sensitive or owner-only matters are handed off for your manual reply.\n\n' +
-                    'Usage: \`.away on\` or \`.away off\`'
+                    'Usage: .away on or .away off
                 );
             }
 
