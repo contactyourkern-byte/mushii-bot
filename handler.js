@@ -346,9 +346,10 @@ async function handleMessages(sock, message) {
             && typeof p.isAwayEnabled === 'function'
             && typeof p.handleAutoReply === 'function');
         const autoReplyEnabled = awayPlugin?.isAwayEnabled() || false;
-        const ownerNumberForAway = ((process.env.OWNER_NUMBER || '').trim()
-            || (typeof config.OWNER_NUMBER === 'string' ? config.OWNER_NUMBER.trim() : '')
-            || (global.botNum || '')).replace(/\D/g, '');
+        const configuredOwnerNumberForHandoff = ((process.env.OWNER_NUMBER || '').trim()
+            || (typeof config.OWNER_NUMBER === 'string' ? config.OWNER_NUMBER.trim() : '')).replace(/\D/g, '');
+        const ownerNumberForAway = configuredOwnerNumberForHandoff
+            || String(global.botNum || '').replace(/\D/g, '');
         const bareSenderLid = from.endsWith('@lid') ? from.split(':')[0].split('@')[0] : '';
         const lidPhoneForAway = bareSenderLid ? (
             global.lidPhoneCache?.get(bareSenderLid)
@@ -400,8 +401,8 @@ async function handleMessages(sock, message) {
                     isProtocolMessage: false,
                     safeSend: (content, opts) => safeSend(sock, jid, content, opts),
                     notifyOwner: async ({ reason }) => {
-                        if (!ownerNumberForAway) throw new Error('OWNER_NUMBER is not configured');
-                        const ownerJid = ownerNumberForAway + '@s.whatsapp.net';
+                        if (!configuredOwnerNumberForHandoff) throw new Error('OWNER_NUMBER is not configured');
+                        const ownerJid = configuredOwnerNumberForHandoff + '@s.whatsapp.net';
                         const notice = [
                             '🧑‍💼 *MUSHII AI — HUMAN HANDOFF*',
                             '',
