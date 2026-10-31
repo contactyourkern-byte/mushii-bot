@@ -147,7 +147,7 @@ test('replies once per sender during cooldown and persists cooldown across resta
     assert.equal(await first.replyToMessage(message), false);
     assert.equal(sent.length, 1);
 
-    const afterRestart = createAutoReply({ filePath, now: () => timestamp });
+    const afterRestart = createAutoReply({ filePath, now: () => timestamp, generateReply: async () => 'AI generated test reply' });
     assert.equal(afterRestart.isEnabled(), true);
     assert.equal(await afterRestart.replyToMessage(message), false);
 
@@ -178,7 +178,7 @@ test('ignores groups, status, newsletters, bot messages, protocol messages, and 
 
 test('releases the cooldown when sending fails', async t => {
     const filePath = await createStatePath(t);
-    const autoReply = createAutoReply({ filePath });
+    const autoReply = createAutoReply({ filePath, generateReply: async () => 'AI generated test reply' });
     autoReply.setEnabled(true);
     const message = {
         jid: 'contact@s.whatsapp.net',
