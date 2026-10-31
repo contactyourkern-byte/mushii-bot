@@ -382,6 +382,7 @@ test('uses Gemini as the primary provider when both AI keys are configured', asy
         assert.equal(answer, 'Gemini answer.');
         assert.equal(calls.length, 1);
         assert.match(calls[0].url, /generativelanguage\.googleapis\.com/);
+        assert.match(calls[0].url, /gemini-3\.5-flash-lite/);
         assert.equal(calls[0].options.headers['x-goog-api-key'], 'test-gemini-key');
         assert.equal(calls[0].body.generationConfig.maxOutputTokens, 450);
         assert.equal(calls[0].body.generationConfig.thinkingConfig.thinkingLevel, 'low');
