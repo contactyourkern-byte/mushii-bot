@@ -22,6 +22,7 @@ function createAwayPlugin(autoReply = createAutoReply()) {
         handleAutoReply: (sock, message, text, context) => autoReply.replyToMessage({
             jid: context.jid,
             sender: context.from || context.jid,
+            senderNumber: context.senderNumber || '',
             text,
             isGroup: context.isGroup,
             isOwner: context.isOwner,
