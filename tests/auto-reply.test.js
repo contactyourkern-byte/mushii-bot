@@ -30,7 +30,7 @@ async function createStatePath(t) {
 
 test('finalizes every AI reply with a language-matched identity and optional personal footer', () => {
     const english = finalizeAutoReply('MUSHII AI: I am still learning, thank you for your patience.', 'I may need to check that personally.');
-    assert.equal(english, 'I am still learning, thank you for your patience.\\n\\nI may need to check that personally.\\n\\n— MUSHII AI · AI assistant');
+    assert.equal(english, 'I am still learning, thank you for your patience.\n\nI may need to check that personally.\n\n— MUSHII AI · AI assistant');
     const kinyarwanda = finalizeAutoReply('MUSHII AI: Ndacyiga, kandi ndishimira ukwihangana kwawe.');
     assert.match(kinyarwanda, /— MUSHII AI · umufasha ukoresha ubwenge buhangano$/);
     assert.doesNotMatch(english, /^MUSHII AI:/);
