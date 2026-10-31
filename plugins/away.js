@@ -146,8 +146,10 @@ function createAwayPlugin(autoReply = createAutoReply()) {
             const action = (args[0] || '').toLowerCase();
             if (action !== 'on' && action !== 'off') {
                 const status = autoReply.isEnabled() ? 'ON' : 'OFF';
+                const fixed = autoReply.getFixedMessage();
                 return context.reply([
                     'MUSHII AI Auto Reply is currently *' + status + '*.',
+                    fixed.enabled ? '• Reply mode: fixed message' : '• Reply mode: AI-generated',
                     '',
                     '• Context-aware private chat replies',
                     '• Clear, polished Kinyarwanda and natural English',
@@ -164,8 +166,11 @@ function createAwayPlugin(autoReply = createAutoReply()) {
 
             const enabled = action === 'on';
             autoReply.setEnabled(enabled);
+            const fixedMode = autoReply.getFixedMessage().enabled;
             return context.reply(enabled
-                ? '✅ *MUSHII AI Auto Reply is ON.*\n\nProfessional contextual replies are enabled for private chats. The AI uses recent conversation context, a 15-second per-contact cooldown, and hands sensitive or owner-only matters to you for a manual reply.'
+                ? fixedMode
+                    ? '✅ *MUSHII Auto Reply is ON.*\n\nYour fixed away message will be sent to private contacts, with the MUSHII AI identity footer. Use `.awaymessage ai` to return to AI-generated replies.'
+                    : '✅ *MUSHII AI Auto Reply is ON.*\n\nProfessional contextual replies are enabled for private chats. The AI uses recent conversation context, a 15-second per-contact cooldown, and hands sensitive or owner-only matters to you for a manual reply.'
                 : '✅ *MUSHII AI Auto Reply is OFF.*\n\nAutomatic replies are disabled and temporary conversation memory has been cleared.');
         }
     };
