@@ -1,19 +1,27 @@
 'use strict';
 
 const MENU_LINES = [
-    '🎮 *Games & Fun*',
-    '• `.joke`  `.truth`  `.dare`',
-    '• `.riddle`  `.8ball <question>`  `.ship <name> and <name>`',
-    '• `.rps <rock|paper|scissors>`  `.dice [sides]`',
-    '• `.trivia`  `.compliment`',
+    '╭━━━〔 01 · 🎮 *GAMES & FUN* 〕━━━',
+    '│ 😂 `.joke` — Get a random joke',
+    '│ 💬 `.truth` — Answer a fun truth question',
+    '│ 🎯 `.dare` — Take on a playful dare',
+    '│ 🧩 `.riddle` — Solve a brain teaser',
+    '│ 🔮 `.8ball <question>` — Ask the magic 8-ball',
+    '│ 💞 `.ship <name> and <name>` — Check name compatibility',
+    '│ ✊ `.rps <rock|paper|scissors>` — Play rock-paper-scissors',
+    '│ 🎲 `.dice [sides]` — Roll a die',
+    '│ 🏆 `.trivia` — Play a trivia quiz',
+    '│ ✨ `.compliment` — Get a feel-good compliment',
+    '╰━━━━━━━━━━━━━━━━━━━━━━',
     '',
-    '🎵 *Music & Video*',
-    '• `.play <song or YouTube link>`',
-    '• `.ytmp3 <YouTube link>`',
-    '• `.ytmp4 <YouTube link>`',
-    '• `.download <public media link> [mp3|mp4]`',
+    '╭━━━〔 02 · 🎵 *MUSIC & VIDEO* 〕━━━',
+    '│ 🎧 `.play <song or YouTube link>` — Find and play a song',
+    '│ 🎵 `.ytmp3 <YouTube link>` — Download YouTube audio',
+    '│ 🎬 `.ytmp4 <YouTube link>` — Download a YouTube video',
+    '│ 📥 `.download <public media link> [mp3|mp4]` — Download public media',
+    '╰━━━━━━━━━━━━━━━━━━━━━━',
     '',
-    'Use `.menu` to view this menu again.'
+    '✨ Type `.menu` anytime to explore MUSHII ELITE.'
 ];
 
 const COMMAND_HELP = {
@@ -33,6 +41,17 @@ const COMMAND_HELP = {
     download: '.download <public media link> [mp3|mp4]'
 };
 
+function buildMenu() {
+    return [
+        '╔══════════════════════╗',
+        '      ✨ *MUSHII ELITE* ✨',
+        '   _Your premium entertainment_',
+        '╚══════════════════════╝',
+        '',
+        ...MENU_LINES
+    ].join('\n');
+}
+
 module.exports = {
     commands: ['menu', 'help', 'commands'],
     description: 'Show the MUSHII Entertainment menu',
@@ -48,6 +67,8 @@ module.exports = {
                 ? `📖 *MUSHII Help: ${command}*\n\nUsage: ${COMMAND_HELP[command]}`
                 : `No MUSHII Entertainment help is available for ${command}. Use .menu.`);
         }
-        return ctx.reply(['✨ *MUSHII Entertainment*', '', ...MENU_LINES].join('\n'));
-    }
+        return ctx.reply(buildMenu());
+    },
+
+    __test: { buildMenu }
 };

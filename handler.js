@@ -6,6 +6,7 @@ const config = require('./config');
 const { getStr, getActiveTheme } = require('./lib/theme');
 const { extractMessageText, unwrapMessageContent, containsViewOnceWrapper } = require('./lib/message-utils');
 const { recordUser } = require('./lib/database');
+const { isCommandMessage } = require('./lib/auto-reply');
 
 let isJidGroup, areJidsSameUser, jidNormalizedUser, normalizeMessageContent;
 try {
@@ -341,10 +342,62 @@ async function handleMessages(sock, message) {
             metadata: { chatJid: jid, hasText: Boolean(text), fromMe: Boolean(message.key.fromMe) }
         }).catch(() => {});
 
+        const awayPlugin = plugins.find(p => p.commands?.includes('away')
+            && typeof p.isAwayEnabled === 'function'
+            && typeof p.handleAutoReply === 'function');
+        const autoReplyEnabled = awayPlugin?.isAwayEnabled() || false;
+        const ownerNumberForAway = ((process.env.OWNER_NUMBER || '').trim()
+            || (typeof config.OWNER_NUMBER === 'string' ? config.OWNER_NUMBER.trim() : '')
+            || (global.botNum || '')).replace(/\D/g, '');
+        const bareSenderLid = from.endsWith('@lid') ? from.split(':')[0].split('@')[0] : '';
+        const lidPhoneForAway = bareSenderLid ? (
+            global.lidPhoneCache?.get(bareSenderLid)
+            || global.lidPhoneCache?.get(`${bareSenderLid}@lid`)
+            || global.lidPhoneCache?.get(from)
+            || ''
+        ) : '';
+        const senderNumberForAway = jidToNum(lidPhoneForAway || from);
+        const botNumberForAway = String(global.botNum || '').replace(/\D/g, '');
+        const botLidForAway = jidNormalizedUser(global.botLid || '');
+        const senderNormForAway = jidNormalizedUser(from);
+        const sudoUsersForAway = global.sudoUsers
+            && typeof global.sudoUsers[Symbol.iterator] === 'function'
+            ? [...global.sudoUsers]
+            : [];
+        const sudoForAway = global.sudoUsers?.has(from)
+            || global.sudoUsers?.has(senderNormForAway)
+            || (senderNumberForAway && sudoUsersForAway.some(user =>
+                sameNumber(String(user).replace(/@.*/, '').replace(/\D/g, ''), senderNumberForAway)));
+        const ownerForAway = message.key.fromMe
+            || (botLidForAway && senderNormForAway === botLidForAway)
+            || (senderNumberForAway && ownerNumberForAway
+                && sameNumber(senderNumberForAway, ownerNumberForAway))
+            || (senderNumberForAway && botNumberForAway
+                && sameNumber(senderNumberForAway, botNumberForAway))
+            || sudoForAway;
+        const privateJidForAway = typeof jid === 'string'
+            && ['@s.whatsapp.net', '@lid', '@c.us'].some(suffix => jid.endsWith(suffix));
+        if (autoReplyEnabled && awayPlugin && !ownerForAway && privateJidForAway && !isGroup
+            && !isCommandMessage(text, config.PREFIX, plugins)
+            && !msg.protocolMessage && !rawMsg.protocolMessage) {
+            try {
+                await awayPlugin.handleAutoReply(sock, message, text, {
+                    jid,
+                    from,
+                    isGroup,
+                    isOwner: false,
+                    isProtocolMessage: false,
+                    safeSend: (content, opts) => safeSend(sock, jid, content, opts)
+                });
+            } catch (error) {
+                console.error('[Auto Reply] Automatic reply failed:', error.message);
+            }
+        }
+
         // ── AFK auto-reply (fires before prefix check, not for owner's own messages) ──
         if (!message.key.fromMe && !isGroup) {
             const afkPlugin = plugins.find(p => p.commands?.includes('afk') && typeof p.isAfk === 'function');
-            if (afkPlugin?.isAfk()) {
+            if (afkPlugin?.isAfk() && !autoReplyEnabled) {
                 const { reason, since } = afkPlugin.getAfkData();
                 const th = getActiveTheme()?.global || {};
                 await safeSend(sock, jid, {
