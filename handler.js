@@ -703,6 +703,7 @@ async function handleMessages(sock, message) {
             reply:         (replyText) => safeSend(sock, jid, { text: replyText }, { quoted: message }),
             theme:         getActiveTheme()?.global || {},
             getStr,
+            plugins,
             command:       resolvedCommand,
         };
 
