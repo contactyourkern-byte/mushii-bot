@@ -41,6 +41,56 @@ test('detects supported greetings without matching words embedded in other words
     }
 });
 
+test('greeting reply introduces every existing entertainment command with examples', () => {
+    assert.equal(GREETING_REPLY, [
+        '✨ *HEY THERE! WELCOME TO MUSHII ELITE* ✨',
+        '',
+        '👋 Muraho neza! Thanks for reaching out!',
+        '',
+        'Iragena is not online right now, ariko ntugire ikibazo! ❤️',
+        '',
+        'You can still enjoy MUSHII Entertainment.',
+        'Choose any command below and try it!',
+        '',
+        '🎮 *GAMES & FUN*',
+        '😂 .joke — Random jokes',
+        '💭 .truth — Truth questions',
+        '🎯 .dare — Fun challenges',
+        '🧩 .riddle — Brain teasers',
+        '🔮 .8ball <question> — Ask anything',
+        '💞 .ship <name> and <name>',
+        '✊ .rps <rock|paper|scissors>',
+        '🎲 .dice [sides]',
+        '🏆 .trivia — Test your knowledge',
+        '✨ .compliment — Get a compliment',
+        '',
+        '🎵 *MUSIC & VIDEO*',
+        '🎧 .play <song or YouTube link>',
+        '🎵 .ytmp3 <YouTube link>',
+        '🎬 .ytmp4 <YouTube link>',
+        '📥 .download <public media link> [mp3|mp4]',
+        '',
+        '🚀 *TRY THESE COMMANDS NOW!*',
+        '',
+        'Copy and send:',
+        '```',
+        '.play Basara Zuba Ray',
+        '.joke',
+        '.trivia',
+        '```',
+        '',
+        '💎 Type .menu to explore more!',
+        '',
+        '*Enjoy MUSHII ELITE!* ❤️'
+    ].join('\n'));
+
+    for (const command of ['joke', 'truth', 'dare', 'riddle', '8ball', 'ship', 'rps',
+        'dice', 'trivia', 'compliment', 'play', 'ytmp3', 'ytmp4', 'download']) {
+        assert.ok(registeredCommands.has(command), `.${command} must remain registered`);
+        assert.match(GREETING_REPLY, new RegExp(`\\.${command}(?:\\s|$)`));
+    }
+});
+
 test('default reply includes the requested help and two registered commands', () => {
     assert.equal(DEFAULT_REPLY, [
         '✨ MUSHII ENTERTAINMENT ✨',
