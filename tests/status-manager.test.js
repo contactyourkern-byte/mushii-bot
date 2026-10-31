@@ -28,8 +28,7 @@ test('runtime autolike ON overrides disabled config and sends reaction with phon
         await handleStatusBroadcast(sock, makeStatus('status-runtime-on-' + Date.now()), undefined);
         assert.equal(sent.length, 1);
         assert.equal(sent[0][0], 'status@broadcast');
-        assert.equal(sent[0][2].statusJidList.includes('250788123456@s.whatsapp.net'), true);
-        assert.equal(sent[0][2].statusJidList.includes('250700000000@s.whatsapp.net'), true);
+        assert.deepEqual(sent[0][2].statusJidList, ['250788123456@s.whatsapp.net']);
         assert.equal(getAutoStatusSettings().autoLikeStatus, 'true');
     } finally {
         global.autoStatusFlags = previous;
