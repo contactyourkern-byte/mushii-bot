@@ -9,7 +9,7 @@ async function callGemini(prompt, timeoutMs = 4000, maxOutputTokens = 450) {
     const key = String(process.env.GEMINI_API_KEY || '').trim();
     if (!key) return null;
 
-    const model = String(process.env.GEMINI_MODEL || 'gemini-3.8-flash').trim();
+    const model = String(process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
     try {
         const response = await axios.post(
             'https://generativelanguage.googleapis.com/v1beta/models/' +
