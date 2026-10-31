@@ -223,7 +223,7 @@ test('automatic reply does not block the normal .menu command', async t => {
     const awayIndex = plugins.findIndex(plugin => plugin.commands?.includes('away'));
     assert.notEqual(awayIndex, -1);
     const originalAwayPlugin = plugins[awayIndex];
-    plugins[awayIndex] = awayTest.createAwayPlugin(createAutoReply({ filePath }));
+    plugins[awayIndex] = awayTest.createAwayPlugin(createAutoReply({ filePath, generateReply: async () => 'AI generated test reply' }));
 
     const sent = [];
     const sock = {
