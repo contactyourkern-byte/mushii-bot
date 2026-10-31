@@ -11,6 +11,7 @@ const {
     COOLDOWN_MS,
     HISTORY_LIMIT,
     buildAutoReplyPrompt,
+    finalizeAutoReply,
     createAutoReply,
     createConversationHistory,
     isCommandMessage,
@@ -25,6 +26,53 @@ async function createStatePath(t) {
     t.after(() => fs.rm(directory, { recursive: true, force: true }));
     return path.join(directory, 'away.json');
 }
+
+
+test('finalizes every AI reply with a language-matched identity and optional personal footer', () => {
+    const english = finalizeAutoReply('MUSHII AI: I am still learning, thank you for your patience.', 'I may need to check that personally.');
+    assert.equal(english, 'I am still learning, thank you for your patience.\\n\\nI may need to check that personally.\\n\\n— MUSHII AI · AI assistant');
+    const kinyarwanda = finalizeAutoReply('MUSHII AI: Ndacyiga, kandi ndishimira ukwihangana kwawe.');
+    assert.match(kinyarwanda, /— MUSHII AI · umufasha ukoresha ubwenge buhangano$/);
+    assert.doesNotMatch(english, /^MUSHII AI:/);
+});
+
+test('owner-managed footer templates are language-filtered, persisted separately, and applied to outgoing replies', async t => {
+    const filePath = await createStatePath(t);
+    const templatePath = path.join(path.dirname(filePath), 'personal-footers.json');
+    const autoReply = createAutoReply({
+        filePath,
+        templatePath,
+        generateReply: async () => ({ action: 'reply', reply: 'Ndacyiga kandi ndashimira ukwihangana kwawe.' })
+    });
+    autoReply.setEnabled(true);
+    const saved = autoReply.addFooterTemplate('rw', 'Ndagushimira ko unyumva.');
+    assert.ok(saved.id);
+    assert.equal(autoReply.addFooterTemplate('rw', 'Ndagushimira ko unyumva.'), null);
+    autoReply.addFooterTemplate('en', 'I am currently unavailable.');
+    assert.equal(autoReply.getFooterTemplates().length, 2);
+
+    let sent = '';
+    assert.equal(await autoReply.replyToMessage({
+        jid: 'contact@s.whatsapp.net',
+        text: 'Muraho, uraho?',
+        send: async content => { sent = content.text; return { key: { id: 'with-footer' } }; }
+    }), true);
+    assert.match(sent, /Ndagushimira ko unyumva\./);
+    assert.match(sent, /MUSHII AI/);
+    assert.doesNotMatch(sent, /I am currently unavailable/);
+
+    const restarted = createAutoReply({ filePath, templatePath });
+    assert.equal(restarted.getFooterTemplates().length, 2);
+    assert.equal(restarted.removeFooterTemplate(saved.id), true);
+    assert.equal(restarted.getFooterTemplates().length, 1);
+});
+
+test('registers owner-only personal footer template command without removing existing commands', () => {
+    const commands = new Set(loadedPlugins.flatMap(plugin => plugin.commands || []));
+    for (const command of ['away', 'awaymute', 'awayunmute', 'awaymuted', 'awaytemplate', 'autoreply', 'awaymsg', 'setaway', 'awayoff']) {
+        assert.ok(commands.has(command), 'Expected existing or new auto-reply command .' + command + ' to remain registered');
+    }
+});
 
 test('uses a 15-second per-contact cooldown and persists it across restarts', async t => {
     const filePath = await createStatePath(t);
