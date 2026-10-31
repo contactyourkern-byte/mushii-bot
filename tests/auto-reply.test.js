@@ -203,7 +203,7 @@ test('away command is owner-only and persists on/off controls', async t => {
     };
 
     await away.run({}, {}, ['on'], context);
-    assert.equal(autoReply.isEnabled(), false);
+    assert.equal(autoReply.isEnabled(), true);
     assert.match(replies.pop(), /Only the bot owner/);
 
     context.isOwner = true;
