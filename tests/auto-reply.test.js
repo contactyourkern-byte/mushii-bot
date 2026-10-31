@@ -239,6 +239,7 @@ test('failed generation releases cooldown so a later message can be answered', a
 test('away command remains owner-only and off clears temporary chat memory', async t => {
     const filePath = await createStatePath(t);
     const autoReply = createAutoReply({ filePath });
+    autoReply.setEnabled(false);
     const away = awayTest.createAwayPlugin(autoReply);
     const replies = [];
     const context = { isOwner: false, reply: async text => replies.push(text) };

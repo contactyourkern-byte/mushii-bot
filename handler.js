@@ -378,6 +378,7 @@ async function handleMessages(sock, message) {
         const privateJidForAway = typeof jid === 'string'
             && ['@s.whatsapp.net', '@lid', '@c.us'].some(suffix => jid.endsWith(suffix));
         const eligibleConversationMessage = autoReplyEnabled && awayPlugin
+            && Boolean(String(text || '').trim())
             && privateJidForAway && !isGroup
             && !isCommandMessage(text, config.PREFIX, plugins)
             && !msg.protocolMessage && !rawMsg.protocolMessage;
