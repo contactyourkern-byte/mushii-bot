@@ -74,12 +74,12 @@ function main() {
 
     const oldBlock = [
         '                    if (isStatus) {',
-        '                        // Always include sender\\'s own JID for status so they can see their own status',
+        '                        // Always include sender\'s own JID for status so they can see their own status',
         '                        const normalizedMeId = (0, WABinary_1.jidNormalizedUser)(meId);',
         '                        if (!participantsList.includes(normalizedMeId)) {',
         '                            participantsList.push(normalizedMeId);',
         '                        }',
-        '                        // Also include sender\\'s LID if available for multi-device compatibility',
+        '                        // Also include sender\'s LID if available for multi-device compatibility',
         '                        const meLid = authState.creds.me?.lid;',
         '                        if (meLid) {',
         '                            const normalizedMeLid = (0, WABinary_1.jidNormalizedUser)(meLid);',
@@ -96,9 +96,9 @@ function main() {
         '                                }',
         '                            }',
         '                        } else {',
-        '                            logger.warn({ meId }, \\'No statusJidList provided for status message - only sender will see the status. Provide statusJidList with contact JIDs for others to view.\\');',
+        '                            logger.warn({ meId }, \'No statusJidList provided for status message - only sender will see the status. Provide statusJidList with contact JIDs for others to view.\');',
         '                        }',
-        '                        logger.debug({ participantsList, statusJidList }, \\'Status message participants\\');',
+        '                        logger.debug({ participantsList, statusJidList }, \'Status message participants\');',
         '                    }'
     ].join('\n');
 
@@ -123,24 +123,24 @@ function main() {
         '                        if (statusJidList && Array.isArray(statusJidList) && statusJidList.length > 0) {',
         '                            for (const jidItem of statusJidList) {',
         '                                let normalizedJid = (0, WABinary_1.jidNormalizedUser)(jidItem);',
-        '                                if (meLid && normalizedJid.endsWith(\\'@s.whatsapp.net\\')) {',
+        '                                if (meLid && normalizedJid.endsWith(\'@s.whatsapp.net\')) {',
         '                                    const mappedLid = lid_mapping_1.globalLidMapping.getLidFromPn(normalizedJid);',
         '                                    if (!mappedLid) {',
-        '                                        throw new boom_1.Boom(\\'Could not resolve LID for one status recipient. Refresh contacts and retry.\\', { statusCode: 400 });',
+        '                                        throw new boom_1.Boom(\'Could not resolve LID for one status recipient. Refresh contacts and retry.\', { statusCode: 400 });',
         '                                    }',
         '                                    normalizedJid = (0, WABinary_1.jidNormalizedUser)(mappedLid);',
         '                                }',
-        '                                if (meLid && !normalizedJid.endsWith(\\'@lid\\') && !normalizedJid.endsWith(\\'@hosted.lid\\')) {',
-        '                                    throw new boom_1.Boom(\\'A LID-migrated account requires LID-addressed status recipients.\\', { statusCode: 400 });',
+        '                                if (meLid && !normalizedJid.endsWith(\'@lid\') && !normalizedJid.endsWith(\'@hosted.lid\')) {',
+        '                                    throw new boom_1.Boom(\'A LID-migrated account requires LID-addressed status recipients.\', { statusCode: 400 });',
         '                                }',
         '                                if (!participantsList.includes(normalizedJid)) {',
         '                                    participantsList.push(normalizedJid);',
         '                                }',
         '                            }',
         '                        } else {',
-        '                            logger.warn({ meId }, \\'No statusJidList provided for status message - only sender will see the status. Provide statusJidList with contact JIDs for others to view.\\');',
+        '                            logger.warn({ meId }, \'No statusJidList provided for status message - only sender will see the status. Provide statusJidList with contact JIDs for others to view.\');',
         '                        }',
-        '                        logger.debug({ participantsList, statusJidList }, \\'Status message participants\\');',
+        '                        logger.debug({ participantsList, statusJidList }, \'Status message participants\');',
         '                    }'
     ].join('\n');
 
