@@ -1,12 +1,10 @@
 'use strict';
 
-const axios = require('axios');
 const playdl = require('play-dl');
-
-const BASE = 'https://apis.davidcyriltech.my.id';
+const { isYoutubeUrl, withDownloadedMedia } = require('../lib/youtube-media');
 
 async function searchYoutube(query) {
-    const isUrl = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(query);
+    const isUrl = isYoutubeUrl(query);
     if (isUrl) {
         try {
             const info = await playdl.video_info(query);
@@ -20,13 +18,6 @@ async function searchYoutube(query) {
     if (!results?.length) throw new Error('No results found for: ' + query);
     const v = results[0];
     return { url: v.url, title: v.title || 'Unknown', artist: v.channel?.name || 'Unknown', thumbnail: v.thumbnails?.slice(-1)[0]?.url || '', duration: v.durationRaw || '' };
-}
-
-async function downloadMp3(videoUrl) {
-    const { data } = await axios.get(`${BASE}/download/ytmp3?url=${encodeURIComponent(videoUrl)}`, { timeout: 30000 });
-    const link = data?.result?.download_url || data?.result?.downloadUrl || data?.result?.url || data?.url || data?.link;
-    if (!link) throw new Error('No download link in API response');
-    return link;
 }
 
 module.exports = {
@@ -59,22 +50,22 @@ module.exports = {
                 contextInfo
             }, { quoted: message });
 
-            const audioUrl = await downloadMp3(track.url);
-
-            await sock.sendMessage(sender, {
-                audio:    { url: audioUrl },
-                mimetype: 'audio/mpeg',
-                ptt:      false,
-                contextInfo
-            }, { quoted: message });
-
             const safeName = track.title.replace(/[^\w\s-]/g, '').trim().slice(0, 50);
-            await sock.sendMessage(sender, {
-                document: { url: audioUrl },
-                mimetype: 'audio/mpeg',
-                fileName: `${safeName}.mp3`,
-                contextInfo
-            }, { quoted: message });
+            await withDownloadedMedia(track.url, 'audio', async ({ filePath }) => {
+                await sock.sendMessage(sender, {
+                    audio:    { url: filePath },
+                    mimetype: 'audio/mpeg',
+                    ptt:      false,
+                    contextInfo
+                }, { quoted: message });
+
+                await sock.sendMessage(sender, {
+                    document: { url: filePath },
+                    mimetype: 'audio/mpeg',
+                    fileName: `${safeName}.mp3`,
+                    contextInfo
+                }, { quoted: message });
+            });
 
         } catch (err) {
             await sock.sendMessage(sender, {
