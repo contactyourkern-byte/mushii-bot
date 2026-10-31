@@ -132,7 +132,7 @@ test('does not send away replies for registered commands', () => {
 test('replies once per sender during cooldown and persists cooldown across restarts', async t => {
     const filePath = await createStatePath(t);
     let timestamp = 1_000_000;
-    const first = createAutoReply({ filePath, now: () => timestamp });
+    const first = createAutoReply({ filePath, now: () => timestamp, generateReply: async () => 'AI generated test reply' });
     first.setEnabled(true);
     const sent = [];
     const send = async content => sent.push(content.text);
@@ -158,7 +158,7 @@ test('replies once per sender during cooldown and persists cooldown across resta
 
 test('ignores groups, status, newsletters, bot messages, protocol messages, and owners', async t => {
     const filePath = await createStatePath(t);
-    const autoReply = createAutoReply({ filePath });
+    const autoReply = createAutoReply({ filePath, generateReply: async () => 'AI generated test reply' });
     autoReply.setEnabled(true);
     let sendCount = 0;
     const send = async () => { sendCount++; };
@@ -244,7 +244,7 @@ test('automatic reply does not block the normal .menu command', async t => {
         await handleMessages(sock, message('plain-message', 'another-contact@s.whatsapp.net', 'hello there'));
 
         assert.match(sent[1].content.text, /MUSHII ELITE/);
-        assert.equal(sent[2].content.text, GREETING_REPLY);
+        assert.equal(sent[2].content.text, 'AI generated test reply');
     } finally {
         plugins[awayIndex] = originalAwayPlugin;
     }
@@ -275,4 +275,25 @@ test('premium menu includes every existing command with exact syntax', async () 
         'trivia', 'compliment', 'play', 'ytmp3', 'ytmp4', 'download']) {
         assert.ok(registeredCommands.has(command), `.${command} must remain registered`);
     }
+});
+
+test('AI auto reply uses the generated answer, not a canned greeting', async t => {
+    const filePath = await createStatePath(t);
+    let received = '';
+    const autoReply = createAutoReply({
+        filePath,
+        generateReply: async text => {
+            received = text;
+            return 'Ni meza, nagufasha iki uyu munsi?';
+        }
+    });
+    autoReply.setEnabled(true);
+    let sent;
+    await autoReply.replyToMessage({
+        jid: 'contact@s.whatsapp.net',
+        text: 'Muraho, wambwira uko nakoresha bot?',
+        send: async content => { sent = content.text; }
+    });
+    assert.equal(received, 'Muraho, wambwira uko nakoresha bot?');
+    assert.equal(sent, 'Ni meza, nagufasha iki uyu munsi?');
 });
