@@ -25,6 +25,27 @@ MUSHII brings games, music search, and public-media downloads to WhatsApp chats.
 
 Use `.help <command>` for command details.
 
+## Documentary research (owner only)
+
+- `.kern scan` / `.kern scan <topic>`: KERN opportunity research.
+- `.kern ideas`: repeat the latest KERN scan.
+- `.kern analyze <topic>`: focused KERN research.
+- `.kern export`: send the latest KERN results as CSV.
+- `.mushii scan` / `.mushii scan <topic>`: MUSHII African-story research.
+- `.mushii ideas`: repeat the latest MUSHII scan.
+- `.mushii script <topic>`: research and draft a Kinyarwanda narration.
+
+KERN covers cybercrime, Logistics of Luxury, Luxury Industry & Business, Luxury Lifestyle & Wealth, strange science/technology, forgotten history, and human extremes. The three luxury pillars are separate research clusters. MUSHII covers African kingdoms, people, mysteries/heritage, culture/entertainment, and innovation/science.
+
+Research commands are owner-only and private-chat-only. Reports and exports are sent to `OWNER_NUMBER` in a private WhatsApp message, not to the originating group. Keep owner number and API keys in private host configuration, never Git. Research data is saved under ignored `data/`.
+
+Optional free research providers:
+- YouTube Data API with `YOUTUBE_API_KEY` (or `GOOGLE_API_KEY`); local safety limit defaults to 20 search calls per Pacific Time day. Without a key, the existing `yt-search` dependency is used as a fallback.
+- Wikipedia and GDELT for supporting reference discovery. Search results are leads, not proof; verify facts independently.
+- Gemini API for Kinyarwanda narration with `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) from a Google AI Studio Free-tier project. Model defaults to `gemini-2.5-flash`; set `RESEARCH_GEMINI_MODEL` if needed. No paid provider fallback is configured.
+
+Scores are editorial heuristics. This initial release uses each cluster's median view count as its comparison baseline and marks confidence low; it does not yet calculate true channel-specific medians.
+
 ## Setup
 
 1. Use Node.js 24.x.
