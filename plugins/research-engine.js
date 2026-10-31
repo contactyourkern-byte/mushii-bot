@@ -1,25 +1,30 @@
 'use strict';
 
+const config = require('../config');
 const R = require('../lib/research-engine');
 const Agent = require('../lib/agent-v2');
 
-function getPrivateOwnerSender(ctx) {
-    if (!ctx?.isOwner || ctx.isGroup) {
-        throw Error('This research command is available only to the owner in a private chat.');
+function ownerDestination(ctx) {
+    const configuredOwner = String(process.env.OWNER_NUMBER || config.OWNER_NUMBER || '').replace(/\\D/g, '');
+    if (!configuredOwner) throw Error('Set OWNER_NUMBER in private host settings.');
+    if (!ctx?.isOwner) throw Error('This research command is owner-only.');
+    if (ctx.isGroup || !ctx.jid || String(ctx.jid).endsWith('@g.us')) {
+        throw Error('Research results can only be delivered to the owner in a private chat.');
     }
-    if (!/^\\d+@(?:s\\.whatsapp\\.net|lid|c\\.us)$/.test(String(ctx.jid || ''))) {
-        throw Error('Could not resolve the owner's private WhatsApp chat.');
-    }
-    if (typeof ctx.safeSend !== 'function') {
-        throw Error('Secure WhatsApp reply handler is unavailable.');
-    }
-    return ctx.safeSend;
+    // Use the authenticated private chat JID rather than rebuilding a phone JID.
+    // This keeps WhatsApp LID routing intact for linked devices.
+    return ctx.jid;
 }
 
-async function send(ctx, text) {
-    const deliver = getPrivateOwnerSender(ctx);
+async function send(sock, jid, text, ctx) {
     const chunks = String(text || '').match(/[\\s\\S]{1,3500}/g) || [''];
-    for (const part of chunks) await deliver({ text: part });
+    for (const part of chunks) {
+        if (typeof ctx?.safeSend === 'function') {
+            await ctx.safeSend({ text: part });
+        } else {
+            await sock.sendMessage(jid, { text: part });
+        }
+    }
 }
 
 function narrationPrompt(topic, result) {
@@ -54,61 +59,61 @@ module.exports = {
     group: false,
     private: true,
     run: async (sock, message, args, ctx) => {
+        let jid = '';
         try {
-            getPrivateOwnerSender(ctx);
-            const profile = ctx.command === 'kern' ? 'kern' : 'mushii';
+            jid = ownerDestination(ctx);
+            const p = ctx.command === 'kern' ? 'kern' : 'mushii';
             const action = String(args[0] || 'help').toLowerCase();
             const topic = args.slice(1).join(' ').trim();
 
             if (action === 'help') {
-                const help = profile === 'kern'
+                const help = p === 'kern'
                     ? '*KERN*\\n.kern scan [topic]\\n.kern ideas\\n.kern analyze <topic>\\n.kern export\\nSeven clusters include cybercrime, all three luxury pillars, strange science, history and human extremes.'
                     : '*MUSHII*\\n.mushii scan [topic]\\n.mushii ideas\\n.mushii script <topic>\\nFive African story clusters.';
-                return send(ctx, help);
+                return send(sock, jid, help, ctx);
             }
 
             if (!['scan', 'ideas', 'analyze', 'export', 'script'].includes(action)) {
-                return send(ctx, 'Unknown action. Use .' + profile + ' help');
+                return send(sock, jid, 'Unknown action. Use .' + p + ' help', ctx);
             }
             if ((action === 'analyze' || action === 'script') && !topic) {
-                return send(ctx, 'Add a topic.');
+                return send(sock, jid, 'Add a topic.', ctx);
             }
-            if (profile === 'kern' && action === 'script') {
-                return send(ctx, 'KERN is research-only; use .mushii script <topic>.');
+            if (p === 'kern' && action === 'script') {
+                return send(sock, jid, 'KERN is research-only; use .mushii script <topic>.', ctx);
             }
-            if (profile === 'mushii' && action === 'analyze') {
-                return send(ctx, 'Use .mushii scan <topic> or .mushii script <topic>.');
+            if (p === 'mushii' && action === 'analyze') {
+                return send(sock, jid, 'Use .mushii scan <topic> or .mushii script <topic>.', ctx);
             }
 
             if (action === 'ideas' || action === 'export') {
-                const saved = R.latest(profile);
-                if (!saved) return send(ctx, 'No saved scan. Run .' + profile + ' scan first.');
-                if (action === 'ideas') return send(ctx, R.report(saved));
-                const deliver = getPrivateOwnerSender(ctx);
-                return deliver({
+                const saved = R.latest(p);
+                if (!saved) return send(sock, jid, 'No saved scan. Run .' + p + ' scan first.', ctx);
+                if (action === 'ideas') return send(sock, jid, R.report(saved), ctx);
+                const document = {
                     document: Buffer.from(R.csv(saved)),
                     mimetype: 'text/csv',
-                    fileName: profile + '-research.csv'
-                });
+                    fileName: p + '-research.csv'
+                };
+                if (typeof ctx.safeSend === 'function') return ctx.safeSend(document);
+                return sock.sendMessage(jid, document);
             }
 
-            await send(ctx, '🔎 ' + profile.toUpperCase() + ' research started. Results will be sent in this private chat.');
-            const result = await R.scan(profile, topic);
+            await send(sock, jid, '🔎 ' + p.toUpperCase() + ' research started. Results will be sent to this private owner chat.', ctx);
+            const result = await R.scan(p, topic);
 
             if (action === 'script') {
                 const generated = await Agent.runAgent(narrationPrompt(topic, result), ctx);
                 const narration = String(generated?.text || '').trim();
                 if (!narration) throw Error('The existing no-key writing service returned an empty response.');
-                return send(ctx, '🇷🇼 *MUSHII KINYARWANDA NARRATION*\\n' + narration);
+                return send(sock, jid, '🇷🇼 *MUSHII KINYARWANDA NARRATION*\\n' + narration, ctx);
             }
-            return send(ctx, R.report(result));
+            return send(sock, jid, R.report(result), ctx);
         } catch (error) {
             const safe = String(error.message || error)
                 .replace(/(key|token|authorization)\\s*[:=]\\s*\\S+/gi, '$1=[redacted]')
                 .slice(0, 240);
-            if (typeof ctx?.safeSend === 'function' && ctx?.isOwner && !ctx?.isGroup) {
-                return ctx.safeSend({ text: '⚠️ Research failed: ' + safe });
-            }
+            if (jid) return send(sock, jid, '⚠️ Research failed: ' + safe, ctx);
             throw error;
         }
     }
