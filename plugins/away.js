@@ -76,7 +76,7 @@ function createAwayPlugin(autoReply = createAutoReply()) {
                     const language = String(args[1] || '').toLowerCase();
                     const phrase = args.slice(2).join(' ').trim();
                     if (!['en', 'rw', 'any'].includes(language) || !phrase) {
-                        return context.reply('Usage: .awaytemplate add <en|rw|any> <your footer phrase>\\nExample: .awaytemplate add rw Ndacyiga, kandi ndishimira ukwihangana kwawe.');
+                        return context.reply('Usage: .awaytemplate add <en|rw|any> <your footer phrase>\nExample: .awaytemplate add rw Ndacyiga, kandi ndishimira ukwihangana kwawe.');
                     }
                     try {
                         const item = autoReply.addFooterTemplate(language, phrase);
@@ -97,10 +97,10 @@ function createAwayPlugin(autoReply = createAutoReply()) {
                 if (action === 'list') {
                     const templates = autoReply.getFooterTemplates();
                     return context.reply(templates.length
-                        ? '*MUSHII personal footer phrases*\\n' + templates.map(item => '• [' + item.id + '] (' + item.language + ') ' + item.text).join('\\n')
+                        ? '*MUSHII personal footer phrases*\n' + templates.map(item => '• [' + item.id + '] (' + item.language + ') ' + item.text).join('\n')
                         : 'No personal footer phrases are saved yet. Add one with .awaytemplate add rw <phrase> or .awaytemplate add en <phrase>.');
                 }
-                return context.reply('Commands:\\n.awaytemplate add <en|rw|any> <phrase>\\n.awaytemplate list\\n.awaytemplate remove <id>');
+                return context.reply('Commands:\n.awaytemplate add <en|rw|any> <phrase>\\n.awaytemplate list\\n.awaytemplate remove <id>');
             }
 
             if (command === 'awaymuted') {
