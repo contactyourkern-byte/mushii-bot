@@ -42,7 +42,7 @@ Research commands are owner-only and private-chat-only. Reports and exports are 
 Optional free research providers:
 - YouTube Data API with `YOUTUBE_API_KEY` (or `GOOGLE_API_KEY`); local safety limit defaults to 20 search calls per Pacific Time day. Without a key, the existing `yt-search` dependency is used as a fallback.
 - Wikipedia and GDELT for supporting reference discovery. Search results are leads, not proof; verify facts independently.
-- Gemini API for Kinyarwanda narration with `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) from a Google AI Studio Free-tier project. Model defaults to `gemini-2.5-flash`; set `RESEARCH_GEMINI_MODEL` if needed. No paid provider fallback is configured.
+- Kinyarwanda narration uses the bot's existing Agent v2 no-key `ch.at` route when no `AGENT_API_KEY` is configured. No new API key is required for this path; it depends on the external no-key service being reachable and available.
 
 Scores are editorial heuristics. This initial release uses each cluster's median view count as its comparison baseline and marks confidence low; it does not yet calculate true channel-specific medians.
 
