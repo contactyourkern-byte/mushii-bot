@@ -1,18 +1,25 @@
 'use strict';
 
-const config = require('../config');
 const R = require('../lib/research-engine');
 const Agent = require('../lib/agent-v2');
 
-function owner() {
-    const n = String(process.env.OWNER_NUMBER || config.OWNER_NUMBER || '').replace(/\\D/g, '');
-    if (!n) throw Error('Set OWNER_NUMBER in private host settings.');
-    return n + '@s.whatsapp.net';
+function getPrivateOwnerSender(ctx) {
+    if (!ctx?.isOwner || ctx.isGroup) {
+        throw Error('This research command is available only to the owner in a private chat.');
+    }
+    if (!/^\\d+@(?:s\\.whatsapp\\.net|lid|c\\.us)$/.test(String(ctx.jid || ''))) {
+        throw Error('Could not resolve the owner's private WhatsApp chat.');
+    }
+    if (typeof ctx.safeSend !== 'function') {
+        throw Error('Secure WhatsApp reply handler is unavailable.');
+    }
+    return ctx.safeSend;
 }
 
-async function send(sock, jid, text) {
+async function send(ctx, text) {
+    const deliver = getPrivateOwnerSender(ctx);
     const chunks = String(text || '').match(/[\\s\\S]{1,3500}/g) || [''];
-    for (const part of chunks) await sock.sendMessage(jid, { text: part });
+    for (const part of chunks) await deliver({ text: part });
 }
 
 function narrationPrompt(topic, result) {
@@ -47,59 +54,61 @@ module.exports = {
     group: false,
     private: true,
     run: async (sock, message, args, ctx) => {
-        let jid = '';
         try {
-            jid = owner();
-            const p = ctx.command === 'kern' ? 'kern' : 'mushii';
+            getPrivateOwnerSender(ctx);
+            const profile = ctx.command === 'kern' ? 'kern' : 'mushii';
             const action = String(args[0] || 'help').toLowerCase();
             const topic = args.slice(1).join(' ').trim();
 
             if (action === 'help') {
-                const help = p === 'kern'
+                const help = profile === 'kern'
                     ? '*KERN*\\n.kern scan [topic]\\n.kern ideas\\n.kern analyze <topic>\\n.kern export\\nSeven clusters include cybercrime, all three luxury pillars, strange science, history and human extremes.'
                     : '*MUSHII*\\n.mushii scan [topic]\\n.mushii ideas\\n.mushii script <topic>\\nFive African story clusters.';
-                return send(sock, jid, help);
+                return send(ctx, help);
             }
 
             if (!['scan', 'ideas', 'analyze', 'export', 'script'].includes(action)) {
-                return send(sock, jid, 'Unknown action. Use .' + p + ' help');
+                return send(ctx, 'Unknown action. Use .' + profile + ' help');
             }
             if ((action === 'analyze' || action === 'script') && !topic) {
-                return send(sock, jid, 'Add a topic.');
+                return send(ctx, 'Add a topic.');
             }
-            if (p === 'kern' && action === 'script') {
-                return send(sock, jid, 'KERN is research-only; use .mushii script <topic>.');
+            if (profile === 'kern' && action === 'script') {
+                return send(ctx, 'KERN is research-only; use .mushii script <topic>.');
             }
-            if (p === 'mushii' && action === 'analyze') {
-                return send(sock, jid, 'Use .mushii scan <topic> or .mushii script <topic>.');
+            if (profile === 'mushii' && action === 'analyze') {
+                return send(ctx, 'Use .mushii scan <topic> or .mushii script <topic>.');
             }
 
             if (action === 'ideas' || action === 'export') {
-                const saved = R.latest(p);
-                if (!saved) return send(sock, jid, 'No saved scan. Run .' + p + ' scan first.');
-                if (action === 'ideas') return send(sock, jid, R.report(saved));
-                return sock.sendMessage(jid, {
+                const saved = R.latest(profile);
+                if (!saved) return send(ctx, 'No saved scan. Run .' + profile + ' scan first.');
+                if (action === 'ideas') return send(ctx, R.report(saved));
+                const deliver = getPrivateOwnerSender(ctx);
+                return deliver({
                     document: Buffer.from(R.csv(saved)),
                     mimetype: 'text/csv',
-                    fileName: p + '-research.csv'
+                    fileName: profile + '-research.csv'
                 });
             }
 
-            await send(sock, jid, '🔎 ' + p.toUpperCase() + ' research started. Results will be sent here.');
-            const result = await R.scan(p, topic);
+            await send(ctx, '🔎 ' + profile.toUpperCase() + ' research started. Results will be sent in this private chat.');
+            const result = await R.scan(profile, topic);
 
             if (action === 'script') {
                 const generated = await Agent.runAgent(narrationPrompt(topic, result), ctx);
                 const narration = String(generated?.text || '').trim();
                 if (!narration) throw Error('The existing no-key writing service returned an empty response.');
-                return send(sock, jid, '🇷🇼 *MUSHII KINYARWANDA NARRATION*\\n' + narration);
+                return send(ctx, '🇷🇼 *MUSHII KINYARWANDA NARRATION*\\n' + narration);
             }
-            return send(sock, jid, R.report(result));
+            return send(ctx, R.report(result));
         } catch (error) {
             const safe = String(error.message || error)
                 .replace(/(key|token|authorization)\\s*[:=]\\s*\\S+/gi, '$1=[redacted]')
                 .slice(0, 240);
-            if (jid) return send(sock, jid, '⚠️ Research failed: ' + safe);
+            if (typeof ctx?.safeSend === 'function' && ctx?.isOwner && !ctx?.isGroup) {
+                return ctx.safeSend({ text: '⚠️ Research failed: ' + safe });
+            }
             throw error;
         }
     }
