@@ -76,6 +76,7 @@ const {
     isOwnerMessage,
 } = require('./lib/deletion-notifications');
 const { trackUndecryptableMessage } = require('./lib/session-recovery');
+const { installPairingCodeHandler } = require('./lib/pairing');
 const { initDatabase } = require('./lib/database');
 const { initCallHandler } = require('./plugins/anticall');
 const config = require('./config.js');
@@ -438,6 +439,13 @@ async function connectToWhatsApp() {
         ...cryptoOptions
     });
 
+    installPairingCodeHandler(sock, {
+        creds: state.creds,
+        pairingNumber: config.PAIRING_NUMBER,
+        onCode: code => console.log(`\n🔐 MUSHII PAIRING CODE: ${code}\n`),
+        onError: error => logMessage('WARN', error.message),
+    });
+
     installPrivateDeletionNotifications(
         sock,
         getOwnerJid,
@@ -614,7 +622,7 @@ async function connectToWhatsApp() {
         } else if (connection === 'open') {
             // Reset backoff counters — we have a stable connection
             _resetReconnect();
-            logMessage('SUCCESS', '✅ Connected to WhatsApp');
+            logMessage('SUCCESS', '✅ MUSHII successfully connected to WhatsApp.');
 
             // ── Keep-alive: send a presence update every 45s to prevent 408 timeouts ──
             if (_keepAliveTimer) clearInterval(_keepAliveTimer);
@@ -638,16 +646,14 @@ async function connectToWhatsApp() {
             global.botLid = rawLid.includes(':')
                 ? rawLid.split(':')[0] + '@' + (rawLid.split('@')[1] || 'lid')
                 : rawLid;
-            logMessage('INFO', `Bot LID: ${global.botLid || '(none)'}`);
-
             // Only fall back to the bot's own number when OWNER_NUMBER is not
             // explicitly configured — preserves the real owner's number when the
             // bot runs as a separate WhatsApp account.
             if (!process.env.OWNER_NUMBER) {
                 config.OWNER_NUMBER = rawNum;
-                logMessage('INFO', `Owner number defaulted to bot number: ${rawNum}`);
+                logMessage('INFO', 'Owner number defaulted to the connected account.');
             } else {
-                logMessage('INFO', `Owner: ${config.OWNER_NUMBER} | Bot number: ${rawNum}`);
+                logMessage('INFO', 'Owner number is configured.');
             }
 
             // Update profile & send welcome
