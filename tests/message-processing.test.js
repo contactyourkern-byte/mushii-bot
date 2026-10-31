@@ -24,10 +24,6 @@ const {
 } = require('../lib/session-recovery');
 const { containsViewOnceWrapper } = require('../lib/message-utils');
 const {
-    isValidPairingNumber,
-    installPairingCodeHandler,
-} = require('../lib/pairing');
-const {
     createPrivateMessageCache,
     installPrivateDeletionNotifications,
 } = require('../lib/deletion-notifications');
@@ -71,101 +67,6 @@ function makeGreetingHarness(options = {}) {
 function incomingPrivateMessage(jid = '254700000000@s.whatsapp.net', fromMe = false) {
     return { key: { id: 'incoming', remoteJid: jid, fromMe }, message: { conversation: 'hi' } };
 }
-
-test('validates pairing numbers as digits including a country calling code', () => {
-    assert.equal(isValidPairingNumber('254700123456'), true);
-    assert.equal(isValidPairingNumber('+254700123456'), false);
-    assert.equal(isValidPairingNumber('254 700 123456'), false);
-    assert.equal(isValidPairingNumber('1234567'), false);
-    assert.equal(isValidPairingNumber('1234567890123456'), false);
-});
-
-test('requests and prints a pairing code only once after QR readiness', async () => {
-    const ev = new EventEmitter();
-    const requested = [];
-    const printed = [];
-    const errors = [];
-    let finish;
-    const completed = new Promise(resolve => { finish = resolve; });
-    installPairingCodeHandler({
-        ev,
-        requestPairingCode: async number => {
-            requested.push(number);
-            return 'ABCD-1234';
-        },
-    }, {
-        creds: { registered: false },
-        pairingNumber: '254700123456',
-        onCode: code => {
-            printed.push(code);
-            finish();
-        },
-        onError: error => {
-            errors.push(error);
-            finish();
-        },
-    });
-
-    assert.deepEqual(requested, []);
-    ev.emit('connection.update', { qr: 'qr-ready' });
-    ev.emit('connection.update', { qr: 'qr-again' });
-    await completed;
-
-    assert.deepEqual(requested, ['254700123456']);
-    assert.deepEqual(printed, ['ABCD-1234']);
-    assert.deepEqual(errors, []);
-});
-
-test('does not request a pairing code when an existing session is registered', async () => {
-    const ev = new EventEmitter();
-    let requests = 0;
-    const handler = installPairingCodeHandler({
-        ev,
-        requestPairingCode: async () => { requests++; return 'ABCD-1234'; },
-    }, {
-        creds: { registered: true },
-        pairingNumber: '254700123456',
-        onCode: () => assert.fail('registered session must not be re-paired'),
-        onError: error => assert.fail(error.message),
-    });
-
-    await handler({ qr: 'qr-ready' });
-    assert.equal(requests, 0);
-});
-
-test('handles invalid pairing numbers and Baileys request failures safely', async () => {
-    const invalidEv = new EventEmitter();
-    let invalidRequests = 0;
-    const invalidErrors = [];
-    const invalidHandler = installPairingCodeHandler({
-        ev: invalidEv,
-        requestPairingCode: async () => { invalidRequests++; return 'ABCD-1234'; },
-    }, {
-        creds: { registered: false },
-        pairingNumber: '+254700123456',
-        onCode: () => assert.fail('invalid number must not produce a code'),
-        onError: error => invalidErrors.push(error.message),
-    });
-    await invalidHandler({ qr: 'qr-ready' });
-
-    const failedEv = new EventEmitter();
-    const failedErrors = [];
-    const failedHandler = installPairingCodeHandler({
-        ev: failedEv,
-        requestPairingCode: async () => { throw new Error('sensitive request details'); },
-    }, {
-        creds: { registered: false },
-        pairingNumber: '254700123456',
-        onCode: () => assert.fail('failed request must not produce a code'),
-        onError: error => failedErrors.push(error.message),
-    });
-    await failedHandler({ qr: 'qr-ready' });
-
-    assert.equal(invalidRequests, 0);
-    assert.match(invalidErrors[0], /digits only/);
-    assert.equal(failedErrors.length, 1);
-    assert.doesNotMatch(failedErrors[0], /sensitive|254700123456/);
-});
 
 test('extracts commands from nested WhatsApp wrappers', () => {
     const wrapped = {
