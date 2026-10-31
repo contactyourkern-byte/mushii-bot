@@ -280,7 +280,7 @@ test('registered commands are not treated as conversation prompts', () => {
 
 test('keeps all away and scheduled auto-reply commands registered', () => {
     const commands = new Set(loadedPlugins.flatMap(plugin => plugin.commands || []));
-    for (const command of ['away', 'autoreply', 'awaymsg', 'setaway', 'awayoff']) {
+    for (const command of ['away', 'awaymute', 'awayunmute', 'awaymuted', 'autoreply', 'awaymsg', 'setaway', 'awayoff']) {
         assert.ok(commands.has(command), 'Expected auto-reply command .' + command + ' to remain registered');
     }
 });
@@ -430,5 +430,55 @@ test('falls back to Groq when Gemini returns a rate limit', async () => {
         else process.env.GEMINI_API_KEY = previousGeminiKey;
         if (previousGroqKey === undefined) delete process.env.GROQ_API_KEY;
         else process.env.GROQ_API_KEY = previousGroqKey;
+    }
+});
+
+
+test('mutes one contact only, matches phone numbers to WhatsApp JIDs, and persists across restarts', async t => {
+    const filePath = await createStatePath(t);
+    const autoReply = createAutoReply({
+        filePath,
+        generateReply: async () => ({ action: 'reply', reply: 'Muraho neza.' })
+    });
+    autoReply.setEnabled(true);
+    assert.equal(autoReply.muteContact('250785562525'), true);
+    assert.equal(autoReply.isContactMuted({ sender: '250785562525@s.whatsapp.net' }), true);
+    assert.equal(autoReply.isContactMuted({ sender: 'another@s.whatsapp.net' }), false);
+
+    const mutedSent = await autoReply.replyToMessage({
+        jid: '250785562525@s.whatsapp.net',
+        sender: '250785562525@s.whatsapp.net',
+        senderNumber: '250785562525',
+        text: 'Muraho',
+        send: async () => ({ key: { id: 'muted-reply' } })
+    });
+    assert.equal(mutedSent, false);
+
+    const otherSent = await autoReply.replyToMessage({
+        jid: '250788888888@s.whatsapp.net',
+        sender: '250788888888@s.whatsapp.net',
+        senderNumber: '250788888888',
+        text: 'Muraho',
+        send: async () => ({ key: { id: 'other-reply' } })
+    });
+    assert.equal(otherSent, true);
+
+    const afterRestart = createAutoReply({ filePath, generateReply: async () => 'Muraho.' });
+    assert.equal(afterRestart.isContactMuted({ sender: '250785562525@s.whatsapp.net' }), true);
+    assert.equal(afterRestart.unmuteContact('250785562525'), true);
+    assert.equal(afterRestart.isContactMuted({ sender: '250785562525@s.whatsapp.net' }), false);
+    assert.equal(afterRestart.getMutedContacts().length, 0);
+});
+
+test('rejects invalid per-contact mute identifiers', async t => {
+    const autoReply = createAutoReply({ filePath: await createStatePath(t) });
+    assert.throws(() => autoReply.muteContact('123'), /valid WhatsApp phone number or private JID/);
+    assert.throws(() => autoReply.unmuteContact(''), /valid WhatsApp phone number or private JID/);
+});
+
+test('registers owner-only per-contact away mute commands', () => {
+    const commands = new Set(loadedPlugins.flatMap(plugin => plugin.commands || []));
+    for (const command of ['away', 'awaymute', 'awayunmute', 'awaymuted']) {
+        assert.ok(commands.has(command), 'Expected per-contact Away command .' + command + ' to be registered');
     }
 });
