@@ -5,7 +5,7 @@ const { createAutoReply } = require('../lib/auto-reply');
 function createAwayPlugin(autoReply = createAutoReply()) {
     return {
         commands:    ['away'],
-        description: 'Toggle automatic private-message replies while away',
+        description: 'Toggle AI-generated automatic private-message replies while away',
         usage:       '.away on | .away off',
         permission:  'owner',
         group:       false,
@@ -37,7 +37,7 @@ function createAwayPlugin(autoReply = createAutoReply()) {
             const enabled = action === 'on';
             autoReply.setEnabled(enabled);
             return context.reply(enabled
-                ? '✅ Auto Reply is ON. Private messages will receive an automatic reply.'
+                ? '✅ AI Auto Reply is ON. Incoming private messages will receive AI-generated replies.'
                 : '✅ Auto Reply is OFF.');
         }
     };
