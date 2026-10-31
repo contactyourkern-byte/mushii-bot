@@ -116,6 +116,34 @@ test('registers fixed away message command without removing scheduler commands',
     }
 });
 
+
+test('awaymessage command is owner-only and switches between fixed and AI replies', async t => {
+    const filePath = await createStatePath(t);
+    const fixedMessagePath = path.join(path.dirname(filePath), 'fixed-message.json');
+    const autoReply = createAutoReply({ filePath, fixedMessagePath });
+    const away = awayTest.createAwayPlugin(autoReply);
+    const replies = [];
+    const context = {
+        isOwner: false,
+        command: 'awaymessage',
+        reply: async value => replies.push(value)
+    };
+
+    await away.run({}, {}, ['set', "I'm sleeping"], context);
+    assert.equal(autoReply.getFixedMessage().enabled, false);
+    assert.match(replies.pop(), /Only the bot owner/);
+
+    context.isOwner = true;
+    await away.run({}, {}, ['set', "I'm not available; I'm sleeping."], context);
+    assert.equal(autoReply.getFixedMessage().enabled, true);
+    assert.equal(autoReply.getFixedMessage().text, "I'm not available; I'm sleeping.");
+    assert.match(replies.pop(), /Fixed away message saved/);
+
+    await away.run({}, {}, ['ai'], context);
+    assert.equal(autoReply.getFixedMessage().enabled, false);
+    assert.match(replies.pop(), /AI-generated replies/);
+});
+
 test('uses a 15-second per-contact cooldown and persists it across restarts', async t => {
     const filePath = await createStatePath(t);
     let timestamp = 1_000_000;
