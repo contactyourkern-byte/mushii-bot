@@ -18,6 +18,7 @@ const {
     parseAIReply
 } = require('../lib/auto-reply');
 const { __test: awayTest } = require('../plugins/away');
+const adminPlugin = require('../plugins/admin');
 const { plugins: loadedPlugins } = require('../handler');
 const { firstAvailable, askAIFast } = require('../plugins/ai2');
 
@@ -142,6 +143,56 @@ test('awaymessage command is owner-only and switches between fixed and AI replie
     await away.run({}, {}, ['ai'], context);
     assert.equal(autoReply.getFixedMessage().enabled, false);
     assert.match(replies.pop(), /AI-generated replies/);
+});
+
+
+test('admin menu dynamically lists all commands outside the normal menu and is owner-only', async () => {
+    const samplePlugins = [
+        { commands: ['menu', 'help', 'commands'], permission: 'public', description: 'Standard menu' },
+        { commands: ['admin'], permission: 'owner', description: 'Admin directory' },
+        { commands: ['alpha', 'alpha-alias'], permission: 'owner', description: 'Owner tools' },
+        { commands: ['beta'], permission: 'admin', description: 'Group tools' },
+        { commands: ['gamma'], permission: 'public', description: 'Public tools' }
+    ];
+    const entries = adminPlugin.__test.collectRemainingCommands(samplePlugins);
+    assert.deepEqual(entries.map(item => item.command), ['alpha', 'alpha-alias', 'beta', 'gamma']);
+    assert.ok(entries.every(item => !adminPlugin.__test.STANDARD_MENU_COMMANDS.has(item.command)));
+    assert.equal(adminPlugin.permission, 'owner');
+
+    let output = '';
+    await adminPlugin.run({}, {}, [], {
+        isOwner: false,
+        plugins: samplePlugins,
+        reply: async text => { output = text; }
+    });
+    assert.match(output, /Owner directory|Owner-only|owner/i);
+
+    await adminPlugin.run({}, {}, ['1'], {
+        isOwner: true,
+        plugins: samplePlugins,
+        prefix: '.',
+        reply: async text => { output = text; }
+    });
+    assert.match(output, /\.alpha/);
+    assert.match(output, /\.beta/);
+    assert.match(output, /\.gamma/);
+    assert.doesNotMatch(output, /\.menu/);
+    assert.match(output, /Page 1\/1/);
+});
+
+test('admin directory paginates long command lists', () => {
+    const samplePlugins = [{
+        commands: Array.from({ length: 60 }, (_, i) => 'extra' + i),
+        permission: 'public',
+        description: 'Extra command'
+    }];
+    const first = adminPlugin.__test.buildAdminMenu(samplePlugins, 1);
+    const second = adminPlugin.__test.buildAdminMenu(samplePlugins, 2);
+    assert.match(first, /Page 1\/3/);
+    assert.match(second, /Page 2\/3/);
+    assert.match(first, /\.admin 2/);
+    assert.doesNotMatch(first, /\.extra25/);
+    assert.match(second, /\.extra25/);
 });
 
 test('uses a 15-second per-contact cooldown and persists it across restarts', async t => {
