@@ -48,7 +48,7 @@ function buildAdminMenu(plugins, page = 1, prefix = '.') {
         totalPages > 1 ? 'Next: ' + prefix + 'admin ' + Math.min(totalPages, currentPage + 1) + ' | Previous: ' + prefix + 'admin ' + Math.max(1, currentPage - 1) : '',
         '_👑 Owner  🛡️ Group admin  🌍 Public_'
     ].filter(Boolean);
-    return lines.join('\\n');
+    return lines.join('\n');
 }
 
 module.exports = {
