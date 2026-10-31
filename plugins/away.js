@@ -4,7 +4,7 @@ const { createAutoReply } = require('../lib/auto-reply');
 
 function createAwayPlugin(autoReply = createAutoReply()) {
     return {
-        commands: ['away', 'awaymute', 'awayunmute', 'awaymuted'],
+        commands: ['away', 'awaymute', 'awayunmute', 'awaymuted', 'awaytemplate'],
         description: 'Toggle professional AI-generated automatic private-message replies while away',
         usage: '.away on | .away off',
         permission: 'owner',
@@ -18,6 +18,9 @@ function createAwayPlugin(autoReply = createAutoReply()) {
         muteContact: identifier => autoReply.muteContact(identifier),
         unmuteContact: identifier => autoReply.unmuteContact(identifier),
         getMutedContacts: () => autoReply.getMutedContacts(),
+        addFooterTemplate: (language, text) => autoReply.addFooterTemplate(language, text),
+        removeFooterTemplate: id => autoReply.removeFooterTemplate(id),
+        getFooterTemplates: () => autoReply.getFooterTemplates(),
 
         handleAutoReply: (sock, message, text, context) => autoReply.replyToMessage({
             jid: context.jid,
@@ -67,6 +70,39 @@ function createAwayPlugin(autoReply = createAutoReply()) {
                 }
             }
 
+            if (command === 'awaytemplate') {
+                const action = String(args[0] || 'list').toLowerCase();
+                if (action === 'add') {
+                    const language = String(args[1] || '').toLowerCase();
+                    const phrase = args.slice(2).join(' ').trim();
+                    if (!['en', 'rw', 'any'].includes(language) || !phrase) {
+                        return context.reply('Usage: .awaytemplate add <en|rw|any> <your footer phrase>\\nExample: .awaytemplate add rw Ndacyiga, kandi ndishimira ukwihangana kwawe.');
+                    }
+                    try {
+                        const item = autoReply.addFooterTemplate(language, phrase);
+                        return context.reply(item
+                            ? '✅ Footer phrase saved. ID: *' + item.id + '* (' + item.language + ').'
+                            : 'ℹ️ That footer phrase already exists for this language.');
+                    } catch (error) {
+                        return context.reply('⚠️ ' + error.message);
+                    }
+                }
+                if (action === 'remove') {
+                    const id = String(args[1] || '').trim();
+                    if (!id) return context.reply('Usage: .awaytemplate remove <id>');
+                    return context.reply(autoReply.removeFooterTemplate(id)
+                        ? '✅ Footer phrase removed.'
+                        : 'ℹ️ No footer phrase found with that ID.');
+                }
+                if (action === 'list') {
+                    const templates = autoReply.getFooterTemplates();
+                    return context.reply(templates.length
+                        ? '*MUSHII personal footer phrases*\\n' + templates.map(item => '• [' + item.id + '] (' + item.language + ') ' + item.text).join('\\n')
+                        : 'No personal footer phrases are saved yet. Add one with .awaytemplate add rw <phrase> or .awaytemplate add en <phrase>.');
+                }
+                return context.reply('Commands:\\n.awaytemplate add <en|rw|any> <phrase>\\n.awaytemplate list\\n.awaytemplate remove <id>');
+            }
+
             if (command === 'awaymuted') {
                 const contacts = autoReply.getMutedContacts();
                 return context.reply(contacts.length
@@ -87,9 +123,11 @@ function createAwayPlugin(autoReply = createAutoReply()) {
                     '• Clear, polished Kinyarwanda and natural English',
                     '• 15-second cooldown per contact',
                     '• Sensitive requests are handed to the owner',
+                    '• Every reply includes an AI identity footer and one optional personal phrase',
                     '',
                     'Commands: .away on | .away off',
-                    '.awaymute <number> | .awayunmute <number> | .awaymuted'
+                    '.awaymute <number> | .awayunmute <number> | .awaymuted',
+                    '.awaytemplate add <en|rw|any> <phrase> | list | remove <id>'
                 ].join('\n'));
             }
 
