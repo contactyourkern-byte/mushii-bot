@@ -4,7 +4,7 @@ const { createAutoReply } = require('../lib/auto-reply');
 
 function createAwayPlugin(autoReply = createAutoReply()) {
     return {
-        commands: ['away', 'awaymute', 'awayunmute', 'awaymuted', 'awaytemplate'],
+        commands: ['away', 'awaymute', 'awayunmute', 'awaymuted', 'awaytemplate', 'awaymessage'],
         description: 'Toggle professional AI-generated automatic private-message replies while away',
         usage: '.away on | .away off',
         permission: 'owner',
@@ -21,6 +21,9 @@ function createAwayPlugin(autoReply = createAutoReply()) {
         addFooterTemplate: (language, text) => autoReply.addFooterTemplate(language, text),
         removeFooterTemplate: id => autoReply.removeFooterTemplate(id),
         getFooterTemplates: () => autoReply.getFooterTemplates(),
+        getFixedMessage: () => autoReply.getFixedMessage(),
+        setFixedMessage: text => autoReply.setFixedMessage(text),
+        setFixedMessageEnabled: enabled => autoReply.setFixedMessageEnabled(enabled),
 
         handleAutoReply: (sock, message, text, context) => autoReply.replyToMessage({
             jid: context.jid,
@@ -45,6 +48,33 @@ function createAwayPlugin(autoReply = createAutoReply()) {
             }
 
             const command = String(context.command || '').toLowerCase();
+
+            if (command === 'awaymessage') {
+                if (!context.isOwner) return context.reply('⛔ Only the bot owner can change the fixed away message.');
+                const action = String(args[0] || 'show').toLowerCase();
+                if (action === 'set') {
+                    const text = args.slice(1).join(' ').trim();
+                    try {
+                        const saved = autoReply.setFixedMessage(text);
+                        return context.reply('✅ *Fixed away message saved and enabled.*\\n\\n' + saved.text + '\\n\\nContacts will receive this same message while `.away on` is active. Use `.awaymessage ai` to switch back to AI replies.');
+                    } catch (error) {
+                        return context.reply('⚠️ ' + error.message + '\\nUsage: .awaymessage set <your message>');
+                    }
+                }
+                if (action === 'ai') {
+                    autoReply.setFixedMessageEnabled(false);
+                    return context.reply('✅ Fixed away message disabled. MUSHII will use AI-generated replies when `.away on` is active.');
+                }
+                if (action === 'show') {
+                    const current = autoReply.getFixedMessage();
+                    return context.reply(current.enabled
+                        ? '📩 *Fixed away message is ON:*\\n\\n' + current.text + '\\n\\nUse `.awaymessage ai` to switch back to AI replies.'
+                        : 'ℹ️ Fixed away message is OFF. MUSHII is using AI replies. Set one with `.awaymessage set <message>`.');
+                }
+                return context.reply('Commands:\\n.awaymessage set <message>\\n.awaymessage show\\n.awaymessage ai');
+            }
+
+
             if (command === 'awaymute' || command === 'awayunmute') {
                 const identifier = String(args[0] || '').trim();
                 if (!identifier) {
@@ -127,7 +157,8 @@ function createAwayPlugin(autoReply = createAutoReply()) {
                     '',
                     'Commands: .away on | .away off',
                     '.awaymute <number> | .awayunmute <number> | .awaymuted',
-                    '.awaytemplate add <en|rw|any> <phrase> | list | remove <id>'
+                    '.awaytemplate add <en|rw|any> <phrase> | list | remove <id>',
+                    '.awaymessage set <message> | show | ai'
                 ].join('\n'));
             }
 
