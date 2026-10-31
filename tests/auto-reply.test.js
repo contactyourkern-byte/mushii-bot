@@ -16,6 +16,7 @@ const {
     parseAIReply
 } = require('../lib/auto-reply');
 const { __test: awayTest } = require('../plugins/away');
+const { plugins: loadedPlugins } = require('../handler');
 
 async function createStatePath(t) {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mushii-away-test-'));
@@ -23,7 +24,7 @@ async function createStatePath(t) {
     return path.join(directory, 'away.json');
 }
 
-test('uses a 30-second per-contact cooldown and persists it across restarts', async t => {
+test('uses a 15-second per-contact cooldown and persists it across restarts', async t => {
     const filePath = await createStatePath(t);
     let timestamp = 1_000_000;
     const first = createAutoReply({
@@ -43,7 +44,7 @@ test('uses a 30-second per-contact cooldown and persists it across restarts', as
         }
     };
 
-    assert.equal(COOLDOWN_MS, 30_000);
+    assert.equal(COOLDOWN_MS, 15_000);
     assert.equal(await first.replyToMessage(message), true);
     assert.equal(await first.replyToMessage(message), false);
     assert.equal(sent.length, 1);
@@ -252,7 +253,7 @@ test('away command remains owner-only and off clears temporary chat memory', asy
     context.isOwner = true;
     await away.run({}, {}, ['on'], context);
     assert.equal(autoReply.isEnabled(), true);
-    assert.match(replies.pop(), /30-second per-contact cooldown/);
+    assert.match(replies.pop(), /15-second per-contact cooldown/);
 
     away.recordConversationMessage({
         key: { remoteJid: 'contact@s.whatsapp.net', id: 'memory', fromMe: false },
@@ -272,4 +273,12 @@ test('registered commands are not treated as conversation prompts', () => {
     assert.equal(isCommandMessage('!play music', '.,!', plugins), true);
     assert.equal(isCommandMessage('hey MUSHII, tell me something', '.', plugins), true);
     assert.equal(isCommandMessage('Muraho neza', '.', plugins), false);
+});
+
+
+test('keeps all away and scheduled auto-reply commands registered', () => {
+    const commands = new Set(loadedPlugins.flatMap(plugin => plugin.commands || []));
+    for (const command of ['away', 'autoreply', 'awaymsg', 'setaway', 'awayoff']) {
+        assert.ok(commands.has(command), 'Expected auto-reply command .' + command + ' to remain registered');
+    }
 });
