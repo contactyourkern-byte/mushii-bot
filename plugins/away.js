@@ -100,7 +100,7 @@ function createAwayPlugin(autoReply = createAutoReply()) {
                         ? '*MUSHII personal footer phrases*\n' + templates.map(item => '• [' + item.id + '] (' + item.language + ') ' + item.text).join('\n')
                         : 'No personal footer phrases are saved yet. Add one with .awaytemplate add rw <phrase> or .awaytemplate add en <phrase>.');
                 }
-                return context.reply('Commands:\n.awaytemplate add <en|rw|any> <phrase>\\n.awaytemplate list\\n.awaytemplate remove <id>');
+                return context.reply('Commands:\n.awaytemplate add <en|rw|any> <phrase>\n.awaytemplate list\n.awaytemplate remove <id>');
             }
 
             if (command === 'awaymuted') {
