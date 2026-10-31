@@ -25,6 +25,14 @@ MUSHII brings games, music search, and public-media downloads to WhatsApp chats.
 
 Use `.help <command>` for command details.
 
+## AI auto-reply (owner controlled)
+
+- `.away on`: enable AI-generated replies to incoming private WhatsApp messages.
+- `.away off`: disable automatic replies.
+- `.away`: check the current setting and usage.
+
+Replies use the message language where possible, are generated from the actual incoming text, and use the existing no-key AI service first. An optional `OPENROUTER_API_KEY` can enable OpenRouter's free-model router (`OPENROUTER_MODEL=openrouter/free`) as the first provider. OpenRouter free models have availability and rate limits; this is not unlimited guaranteed hosting. If all free providers are unavailable, the bot does not send a canned reply. Auto-reply ignores groups, the owner, commands, and protocol messages, and applies a per-contact 60-second cooldown. Conversations use the existing Agent v2 chat history; keep in mind messages are sent to whichever external AI provider handles the request.
+
 ## Documentary research (owner only)
 
 - `.kern scan` / `.kern scan <topic>`: KERN opportunity research.
@@ -57,7 +65,7 @@ Never commit `config.env`, session data, authentication files, passwords, or tok
 
 ## Privacy
 
-MUSHII does not open, forward, or otherwise bypass WhatsApp View Once messages. When a contact deletes a message in a one-to-one chat, MUSHII privately alerts the owner with the sender and deletion time, then forwards the original message when it is available. The in-memory cache is limited to 500 private incoming messages and expires after 24 hours; group messages are not cached or monitored. Messages sent by the owner, disappearing messages, and View Once messages are never forwarded. Automatic greetings are private-chat only and limited to three successful replies to a contact in any rolling 24-hour period. No automatic greeting, welcome, goodbye, or other passive bot response is sent into groups; group commands remain available.
+MUSHII does not open, forward, or otherwise bypass WhatsApp View Once messages. When a contact deletes a message in a one-to-one chat, MUSHII privately alerts the owner with the sender and deletion time, then forwards the original message when it is available. The in-memory cache is limited to 500 private incoming messages and expires after 24 hours; group messages are not cached or monitored. Messages sent by the owner, disappearing messages, and View Once messages are never forwarded. AI auto-replies are private-chat only, ignore commands and the owner, and are limited by a 60-second per-contact cooldown. No automatic greeting, welcome, goodbye, or other passive bot response is sent into groups; group commands remain available.
 
 ## Configuration
 
