@@ -5,6 +5,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
+const axios = require('axios');
 
 const {
     COOLDOWN_MS,
@@ -17,7 +18,7 @@ const {
 } = require('../lib/auto-reply');
 const { __test: awayTest } = require('../plugins/away');
 const { plugins: loadedPlugins } = require('../handler');
-const { firstAvailable } = require('../plugins/ai2');
+const { firstAvailable, askAIFast } = require('../plugins/ai2');
 
 async function createStatePath(t) {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mushii-away-test-'));
@@ -361,4 +362,70 @@ test('skips generic AI provider busy placeholders and continues to the next prov
         async () => 'Igisubizo cyiza.'
     ], 500);
     assert.equal(result, 'Igisubizo cyiza.');
+});
+
+
+test('uses Gemini as the primary provider when both AI keys are configured', async () => {
+    const originalPost = axios.post;
+    const previousGeminiKey = process.env.GEMINI_API_KEY;
+    const previousGroqKey = process.env.GROQ_API_KEY;
+    const calls = [];
+    process.env.GEMINI_API_KEY = 'test-gemini-key';
+    process.env.GROQ_API_KEY = 'test-groq-key';
+    axios.post = async (url, body, options) => {
+        calls.push({ url, body, options });
+        return { data: { candidates: [{ content: { parts: [{ text: 'Gemini answer.' }] } }] } };
+    };
+
+    try {
+        const answer = await askAIFast('Hello', 5000);
+        assert.equal(answer, 'Gemini answer.');
+        assert.equal(calls.length, 1);
+        assert.match(calls[0].url, /generativelanguage\.googleapis\.com/);
+        assert.equal(calls[0].options.headers['x-goog-api-key'], 'test-gemini-key');
+        assert.equal(calls[0].body.generationConfig.maxOutputTokens, 450);
+    } finally {
+        axios.post = originalPost;
+        if (previousGeminiKey === undefined) delete process.env.GEMINI_API_KEY;
+        else process.env.GEMINI_API_KEY = previousGeminiKey;
+        if (previousGroqKey === undefined) delete process.env.GROQ_API_KEY;
+        else process.env.GROQ_API_KEY = previousGroqKey;
+    }
+});
+
+test('falls back to Groq when Gemini returns a rate limit', async () => {
+    const originalPost = axios.post;
+    const previousGeminiKey = process.env.GEMINI_API_KEY;
+    const previousGroqKey = process.env.GROQ_API_KEY;
+    const calls = [];
+    process.env.GEMINI_API_KEY = 'test-gemini-key';
+    process.env.GROQ_API_KEY = 'test-groq-key';
+    axios.post = async (url, body, options) => {
+        calls.push({ url, body, options });
+        if (url.includes('generativelanguage.googleapis.com')) {
+            const error = new Error('rate limited');
+            error.response = { status: 429 };
+            throw error;
+        }
+        if (url.includes('api.groq.com')) {
+            return { data: { choices: [{ message: { content: 'Groq fallback answer.' } }] } };
+        }
+        throw new Error('Unexpected provider URL: ' + url);
+    };
+
+    try {
+        const answer = await askAIFast('Hello', 5000);
+        assert.equal(answer, 'Groq fallback answer.');
+        assert.equal(calls.length, 2);
+        assert.match(calls[0].url, /generativelanguage\.googleapis\.com/);
+        assert.match(calls[1].url, /api\.groq\.com\/openai\/v1\/chat\/completions/);
+        assert.equal(calls[1].options.headers.Authorization, 'Bearer test-groq-key');
+        assert.equal(calls[1].body.model, 'openai/gpt-oss-20b');
+    } finally {
+        axios.post = originalPost;
+        if (previousGeminiKey === undefined) delete process.env.GEMINI_API_KEY;
+        else process.env.GEMINI_API_KEY = previousGeminiKey;
+        if (previousGroqKey === undefined) delete process.env.GROQ_API_KEY;
+        else process.env.GROQ_API_KEY = previousGroqKey;
+    }
 });
