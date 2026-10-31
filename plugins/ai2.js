@@ -33,7 +33,37 @@ async function callPollinations(prompt) {
     } catch { return null; }
 }
 
+
+async function callOpenRouter(prompt) {
+    const key = String(process.env.OPENROUTER_API_KEY || '').trim();
+    if (!key) return null;
+    const model = process.env.OPENROUTER_MODEL || 'openrouter/free';
+    try {
+        const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+            model,
+            messages: [{ role: 'user', content: String(prompt).slice(0, 5000) }],
+            temperature: 0.45,
+            max_tokens: 900
+        }, {
+            headers: {
+                Authorization: 'Bearer ' + key,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://github.com/contactyourkern-byte/mushii-bot',
+                'X-Title': 'MUSHII AI Auto Reply'
+            },
+            timeout: 18000
+        });
+        const answer = response.data?.choices?.[0]?.message?.content;
+        return typeof answer === 'string' && answer.trim() ? answer.trim() : null;
+    } catch (error) {
+        console.warn('[AI] OpenRouter free model unavailable; trying no-key providers:', error.message);
+        return null;
+    }
+}
+
 async function askAI(prompt) {
+    const openRouterAnswer = await callOpenRouter(prompt);
+    if (openRouterAnswer) return openRouterAnswer;
     let pollinationsTriggered = false;
     const pollinationsFallback = new Promise(resolve => {
         setTimeout(() => {
@@ -79,7 +109,7 @@ function buildPlugin(cmds, label, systemHint) {
     };
 }
 
-module.exports = [
+const plugins = [
     buildPlugin(['chatat', 'chat'],      'ch.at AI',      null),
     buildPlugin(['chatai'],               'MUSHII Chat AI', null),
     buildPlugin(['gemini', 'bard'],       'Gemini AI',     'Answer as a knowledgeable AI assistant'),
@@ -91,3 +121,6 @@ module.exports = [
     buildPlugin(['venice'],               'Venice AI',     'Be creative and insightful'),
     buildPlugin(['letmegpt'],             'LetMeGPT',      null),
 ];
+
+module.exports = plugins;
+module.exports.askAI = askAI;
