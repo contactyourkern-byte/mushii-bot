@@ -146,12 +146,15 @@ test('replies once per sender during cooldown and persists cooldown across resta
     assert.equal(await first.replyToMessage(message), true);
     assert.equal(await first.replyToMessage(message), false);
     assert.equal(sent.length, 1);
+    assert.equal(COOLDOWN_MS, 10_000, 'cooldown should be exactly 10 seconds');
 
     const afterRestart = createAutoReply({ filePath, now: () => timestamp, generateReply: async () => 'AI generated test reply' });
     assert.equal(afterRestart.isEnabled(), true);
     assert.equal(await afterRestart.replyToMessage(message), false);
 
-    timestamp += COOLDOWN_MS;
+    timestamp += COOLDOWN_MS - 1;
+    assert.equal(await afterRestart.replyToMessage(message), false);
+    timestamp += 1;
     assert.equal(await afterRestart.replyToMessage(message), true);
     assert.equal(sent.length, 2);
 });
