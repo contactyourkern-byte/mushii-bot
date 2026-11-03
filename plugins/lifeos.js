@@ -373,6 +373,19 @@ async function runLife(sock,msg,args,ctx) {
             const files=await google.listBackups();
             return reply(files.length?'☁️ *GOOGLE DRIVE BACKUPS*\n'+files.map(x=>x.id+' · '+x.name+' · '+x.createdTime).join('\n'):'No MUSHII Life OS backups were found in Drive.');
         }
+        if(sec==='restore') {
+            if (!act || act === 'latest') {
+                const files = await google.listBackups();
+                if (!files.length) return reply('No Google Drive backups found.');
+                return reply('Latest backup: ' + files[0].name + ' · ' + files[0].id +
+                    '\nTo replace current Life OS data, run .life restore ' + files[0].id + ' yes.');
+            }
+            if (p[0] !== 'yes') {
+                return reply('This will replace the current Life OS data. Confirm with .life restore ' + act + ' yes.');
+            }
+            const result = await recoverBackup(act);
+            return reply('Life OS data restored after integrity and passphrase validation. Schema v' + result.version + ', records: ' + result.records + '.');
+        }
         if(sec==='email') {
             if(act==='status') return reply('Email reminders: '+(life.getSettings().emailNotifications?'ON':'OFF')+
                 '\nRecipient configured: '+(Boolean(process.env.LIFE_OS_EMAIL_TO)?'yes':'no')+
