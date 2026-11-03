@@ -378,6 +378,25 @@ async function runLife(sock,msg,args,ctx) {
             }
             return reply('.life email status|test. Set LIFE_OS_EMAIL_TO privately, then enable .life settings email on.');
         }
+        if(sec==='coach') {
+            if(act==='on'||act==='enable') {
+                life.setAICoach(true);
+                return reply('AI Life Coach enabled. A small progress summary and your question may be processed by the configured AI provider. Journal entries, private codes and raw personal records are not sent automatically.');
+            }
+            if(act==='off'||act==='disable') {
+                life.setAICoach(false);
+                return reply('AI Life Coach disabled.');
+            }
+            if(!life.getSettings().aiCoach) return reply('AI Life Coach is off. Use .life coach on to opt in first.');
+            const question=[act,...p].join(' ').trim();
+            if(!question) return reply('Use .life coach <question>.');
+            const report=life.getDailyReport(today), next=life.getNextAction();
+            const goals=life.listGoals().filter(x=>x.status==='active').slice(0,10).map(x=>x.title);
+            const summary='Today: '+JSON.stringify(report)+'\nNext action: '+(next?next.time+' '+next.title:'none')+
+                '\nActive goals: '+JSON.stringify(goals);
+            const result=await aiCoach.runAgent('Act as a practical, honest planning coach. Do not shame or overpromise. Help with this question: '+question+'\nLife OS progress summary (no journal or raw private records): '+summary,ctx);
+            return reply('LIFE COACH\n'+(result.text||'No coaching response returned.'));
+        }
         if(sec==='focus') { if(!['on','off'].includes(act)) return reply('Focus reminders: '+(life.getSettings().focusMode?'ON':'OFF')); life.setFocusMode(act==='on'); return reply(act==='on'?'🎯 Focus reminders ON. This does not block phone apps.':'✅ Focus reminders OFF.'); }
         if(sec==='settings') {
             const v=(p[0]||'').toLowerCase();
