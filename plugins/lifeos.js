@@ -416,7 +416,19 @@ async function runLife(sock,msg,args,ctx) {
                 life.setEmailNotifications(v==='on');
                 return reply('Email reminders '+v+'.');
             }
-            return reply('Settings: advance <min>, timezone <IANA>, dailyagenda on|off [HH:MM], android on|off.');
+            if(act==='backup') {
+                if(!['on','off'].includes(v)) return reply('Use .life settings backup on|off [HH:MM].');
+                if(v==='on'&&!process.env.LIFE_OS_BACKUP_PASSPHRASE) return reply('Set LIFE_OS_BACKUP_PASSPHRASE in private config.env first.');
+                if(v==='on'&&!google.getStatus().connected) return reply('Connect Google first with .life google connect.');
+                const x=life.setAutoBackup(v==='on',p[1]||life.getSettings().autoBackupTime);
+                return reply('Automatic encrypted Drive backup '+(x.enabled?'ON':'OFF')+' at '+x.time+'.');
+            }
+            if(act==='coach') {
+                if(!['on','off'].includes(v)) return reply('Use .life settings coach on|off.');
+                life.setAICoach(v==='on');
+                return reply('AI Life Coach '+v+'.');
+            }
+            return reply('Settings: advance <min>, timezone <IANA>, dailyagenda on|off [HH:MM], android on|off, whatsapp on|off, email on|off, backup on|off [HH:MM], coach on|off.');
         }
         if(sec==='overview') return reply('🌱 *LIFE OS OVERVIEW*\nActive goals: '+life.listGoals().filter(x=>x.status==='active').length+
             '\nActive routines: '+life.listRoutines().filter(x=>x.active).length+
