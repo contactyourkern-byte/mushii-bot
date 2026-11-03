@@ -184,3 +184,15 @@ test('daily and weekly reports summarize agenda, routines, goals and journal act
     assert.equal(weekly.totals.agendaDone, 1);
     assert.equal(weekly.totals.routinesDone, 1);
 });
+
+test('notification channel delivery is tracked independently and survives restart', async t => {
+    const filePath = await makePath(t);
+    const life = createLifeOS({ filePath });
+    life.markNotificationChannelSent('reminder:m1', 'android');
+    assert.ok(life.getNotificationDelivery('reminder:m1').android);
+    assert.equal(life.getNotificationDelivery('reminder:m1').whatsapp, undefined);
+    const restarted = createLifeOS({ filePath });
+    assert.ok(restarted.getNotificationDelivery('reminder:m1').android);
+    restarted.markNotificationSent('reminder:m1');
+    assert.ok(restarted._getState().sentEvents['reminder:m1']);
+});
