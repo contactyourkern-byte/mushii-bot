@@ -368,6 +368,16 @@ async function runLife(sock,msg,args,ctx) {
             const files=await google.listBackups();
             return reply(files.length?'☁️ *GOOGLE DRIVE BACKUPS*\n'+files.map(x=>x.id+' · '+x.name+' · '+x.createdTime).join('\n'):'No MUSHII Life OS backups were found in Drive.');
         }
+        if(sec==='email') {
+            if(act==='status') return reply('Email reminders: '+(life.getSettings().emailNotifications?'ON':'OFF')+
+                '\nRecipient configured: '+(Boolean(process.env.LIFE_OS_EMAIL_TO)?'yes':'no')+
+                '\nGoogle connected: '+(google.getStatus().connected?'yes':'no'));
+            if(act==='test') {
+                await google.sendEmail({to:process.env.LIFE_OS_EMAIL_TO,subject:'MUSHII Life OS test',text:'Your MUSHII Life OS email connection is working.'});
+                return reply('Test email sent. Check the configured inbox.');
+            }
+            return reply('.life email status|test. Set LIFE_OS_EMAIL_TO privately, then enable .life settings email on.');
+        }
         if(sec==='focus') { if(!['on','off'].includes(act)) return reply('Focus reminders: '+(life.getSettings().focusMode?'ON':'OFF')); life.setFocusMode(act==='on'); return reply(act==='on'?'🎯 Focus reminders ON. This does not block phone apps.':'✅ Focus reminders OFF.'); }
         if(sec==='settings') {
             const v=(p[0]||'').toLowerCase();
