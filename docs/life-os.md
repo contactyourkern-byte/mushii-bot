@@ -48,7 +48,12 @@ All Life OS commands are owner-only and private-chat-only. Do not use Life OS co
 | .life upload data | Save an encrypted local copy and upload it to Drive |
 | .life export data | Save an encrypted local backup only |
 | .life backups | List available Drive backups |
+| .life restore <Drive-file-id> yes | Replace current Life OS data from a validated encrypted backup after explicit confirmation |
 | .life email status/test | Check and test email delivery |
+| .life settings whatsapp on/off | Enable or disable WhatsApp reminders |
+| .life settings email on/off | Enable or disable email reminders |
+| .life settings backup on/off [HH:MM] | Enable or disable scheduled encrypted Drive backups |
+| .life settings coach on/off | Enable or disable the AI Life Coach |
 | .life coach on/off / .life coach <question> | Enable or use the optional AI coach |
 
 For local notifications, enable .life settings android on. For WhatsApp reminders, use .life settings whatsapp on/off. Email reminders require .life settings email on after Google is connected and the recipient is configured. Automatic Drive backups use .life settings backup on [HH:MM]; the default time is 22:45 Kigali time.
