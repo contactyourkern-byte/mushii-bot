@@ -219,6 +219,11 @@ function help() {
         '.life goal add <goal> · .life goals · .life goal done|pause|resume|edit|delete <id>',
         '.life journal add|read|search|edit|delete ...',
         '.life code <27|190> <kept|urge|slipped> [note] · .life codes',
+        '.life record add <category> | <title> | <value> · list|show|edit|delete',
+        '.life report day [YYYY-MM-DD] · .life report week',
+        '.life google connect|status|disconnect · .life upload data · .life backups',
+        '.life restore <Drive-file-id> yes · .life export data',
+        '.life email test|status · .life coach on|off|<question>',
         '.life focus on|off · .life settings ... · .life status',
         '_Owner-only and private-chat-only._'
     ].join('\n');
@@ -234,7 +239,10 @@ async function runLife(sock,msg,args,ctx) {
             const s=life.getSettings(), classes=Object.entries(life._getState().weeklyClassTypes).map(([d,t])=>d+':'+t).join(', ')||'not set';
             return reply('🌱 *LIFE OS STATUS*\nTimezone: '+s.timezone+'\nDay: '+life.getDayType(today)+'\nClasses: '+classes+
                 '\nAdvance reminder: '+s.advanceMinutes+' min\nDaily agenda: '+(s.dailyAgenda?'ON':'OFF')+' at '+s.dailyAgendaTime+
-                '\nAndroid: '+(s.androidNotifications?'ON':'OFF')+'\nFocus: '+(s.focusMode?'ON':'OFF')+'\n\n'+nextText(life.getNextAction()));
+                '\nWhatsApp: '+(s.whatsappNotifications?'ON':'OFF')+'\nAndroid pop-up: '+(s.androidNotifications?'ON':'OFF')+
+                '\nEmail: '+(s.emailNotifications?'ON':'OFF')+'\nAuto Drive backup: '+(s.autoBackup?'ON':'OFF')+' at '+s.autoBackupTime+
+                '\nAI Life Coach: '+(s.aiCoach?'ON':'OFF')+'\nFocus: '+(s.focusMode?'ON':'OFF')+
+                '\nGoogle: '+(google.getStatus().connected?'connected':'not connected')+'\n\n'+nextText(life.getNextAction()));
         }
         if(sec==='agenda') {
             if(!act||act==='today'||act==='show') return reply(agenda(today));
