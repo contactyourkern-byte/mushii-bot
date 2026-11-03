@@ -331,6 +331,43 @@ async function runLife(sock,msg,args,ctx) {
                 '\nGoals: '+r.goals.done+' done · '+r.goals.active+' active'+
                 '\nJournal entries: '+r.journalEntries);
         }
+        if(sec==='google') {
+            if(act==='connect') {
+                const auth=google.beginOAuth();
+                return reply('🔐 *GOOGLE CONNECTION*\nOpen this authorization link on this phone and approve Drive file upload + Gmail sending permissions:\n'+auth.authorizationUrl+
+                    '\n\nCallback: '+auth.redirectUri+'\nAfter approval, use .life google status.');
+            }
+            if(act==='status') {
+                const g=google.getStatus();
+                return reply('☁️ Google: '+(g.connected?'CONNECTED':'NOT CONNECTED')+
+                    '\nOAuth: '+g.status+'\n'+g.message+
+                    '\nCallback waiting: '+(g.callbackPending?'yes':'no'));
+            }
+            if(act==='disconnect') {
+                google.disconnect();
+                life.setEmailNotifications(false);
+                life.setAutoBackup(false);
+                return reply('✅ Google disconnected on this device. Existing encrypted backups in Drive are not deleted.');
+            }
+            return reply('.life google connect|status|disconnect');
+        }
+        if(sec==='upload'&&act==='data'||sec==='backup'&&(act===''||act==='data')) {
+            const bytes=createBackup();
+            const date=life.getDateKey(), stamp=new Date().toISOString().replace(/[:.]/g,'-');
+            const localFile=saveLocalBackup(bytes,'mushii-life-os-'+date+'-'+stamp+'.json.enc');
+            if(!google.getStatus().connected) return reply('🔒 Encrypted local backup saved. Google is not connected yet.\nFile: '+localFile+'\nConnect with .life google connect, then run .life upload data.');
+            const result=await google.uploadBackup(bytes,'mushii-life-os-'+date+'-'+stamp+'.json.enc');
+            return reply('✅ *LIFE OS DATA UPLOADED TO GOOGLE DRIVE*\nFile: '+result.name+'\nDrive ID: '+result.id+'\nEncrypted size: '+bytes.length+' bytes\nLocal backup: '+localFile);
+        }
+        if(sec==='export'&&act==='data') {
+            const bytes=createBackup(), stamp=new Date().toISOString().replace(/[:.]/g,'-');
+            const file=saveLocalBackup(bytes,'mushii-life-os-manual-'+stamp+'.json.enc');
+            return reply('✅ Encrypted Life OS export saved locally:\n'+file+'\nKeep LIFE_OS_BACKUP_PASSPHRASE safe; it is required for restore.');
+        }
+        if(sec==='backups'||sec==='download'&&act==='data') {
+            const files=await google.listBackups();
+            return reply(files.length?'☁️ *GOOGLE DRIVE BACKUPS*\n'+files.map(x=>x.id+' · '+x.name+' · '+x.createdTime).join('\n'):'No MUSHII Life OS backups were found in Drive.');
+        }
         if(sec==='focus') { if(!['on','off'].includes(act)) return reply('Focus reminders: '+(life.getSettings().focusMode?'ON':'OFF')); life.setFocusMode(act==='on'); return reply(act==='on'?'🎯 Focus reminders ON. This does not block phone apps.':'✅ Focus reminders OFF.'); }
         if(sec==='settings') {
             const v=(p[0]||'').toLowerCase();
