@@ -207,3 +207,29 @@ test('Life OS version one data migrates while keeping the saved journal', async 
     assert.equal(life.listRecords().length, 0);
     assert.equal(life.getSettings().aiCoach, false);
 });
+
+test('importing a valid Life OS backup replaces current data and rejects invalid data safely', async t => {
+    const filePath = await makePath(t);
+    const target = createLifeOS({ filePath });
+    target.addGoal('Current local goal');
+    const source = createLifeOS({ filePath: await makePath(t) });
+    source.addRecord('work', 'Imported record', 'Backup record value');
+    const result = target.importState(source.exportState());
+    assert.equal(result.imported, true);
+    assert.equal(result.version, 2);
+    assert.equal(result.records, 1);
+    assert.equal(target.listGoals().length, 0);
+    assert.equal(target.listRecords()[0].title, 'Imported record');
+    assert.throws(() => target.importState({ version: 99 }), /unsupported or invalid format/);
+    assert.equal(target.listRecords()[0].title, 'Imported record');
+});
+
+test('Life OS notification preferences and scheduled backup times are validated', async t => {
+    const life = createLifeOS({ filePath: await makePath(t) });
+    assert.equal(life.setWhatsAppNotifications(false), false);
+    assert.equal(life.setEmailNotifications(true), true);
+    assert.deepEqual(life.setAutoBackup(true, '22:45'), { enabled: true, time: '22:45' });
+    assert.throws(() => life.setAutoBackup(true, '29:99'), /HH:MM/);
+    assert.equal(life.setAICoach(true), true);
+    assert.equal(life.getSettings().aiCoach, true);
+});
