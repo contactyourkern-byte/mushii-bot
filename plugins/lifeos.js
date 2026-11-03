@@ -229,7 +229,7 @@ function help() {
         '.life report day [YYYY-MM-DD] · .life report week',
         '.life google connect|status|disconnect · .life upload data · .life backups',
         '.life restore <Drive-file-id> yes · .life export data',
-        '.life email test|status · .life coach on|off|<question>',
+        '.life email test|status · .life coach on|off|<question> · .life doctor',
         '.life focus on|off · .life settings ... · .life status',
         '_Owner-only and private-chat-only._'
     ].join('\n');
@@ -241,6 +241,26 @@ async function runLife(sock,msg,args,ctx) {
     const today=life.getDateKey(), reply=x=>ctx.reply(String(x));
     try {
         if(sec==='help'||sec==='menu') return reply(help());
+        if(sec==='doctor') {
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const binDir = process.env.PREFIX || '/data/data/com.termux/files/usr';
+            const apiAvailable = fs.existsSync(path.join(binDir, 'bin', 'termux-notification'));
+            const settings = life.getSettings();
+            const checks = [
+                'Local data: ' + (fs.existsSync(path.join(__dirname, '..', 'data', 'life-os.json')) ? 'ready' : 'will be created on first save'),
+                'Termux:API command: ' + (apiAvailable ? 'available' : 'not installed'),
+                'Android pop-ups: ' + (settings.androidNotifications ? 'enabled' : 'disabled'),
+                'Google OAuth client: ' + (process.env.LIFE_OS_GOOGLE_CLIENT_ID && process.env.LIFE_OS_GOOGLE_CLIENT_SECRET ? 'configured' : 'not configured'),
+                'Google account: ' + (google.getStatus().connected ? 'connected' : 'not connected'),
+                'Backup passphrase: ' + (process.env.LIFE_OS_BACKUP_PASSPHRASE ? 'configured' : 'not configured'),
+                'Email destination: ' + (process.env.LIFE_OS_EMAIL_TO ? 'configured' : 'not configured'),
+                'Email reminders: ' + (settings.emailNotifications ? 'enabled' : 'disabled'),
+                'AI Life Coach: ' + (settings.aiCoach ? 'enabled' : 'disabled'),
+                'Reminder scheduler: ' + (timer ? 'running' : 'stopped'),
+            ];
+            return reply('LIFE OS DIAGNOSTICS\\n' + checks.join('\\n'));
+        }
         if(sec==='status') {
             const s=life.getSettings(), classes=Object.entries(life._getState().weeklyClassTypes).map(([d,t])=>d+':'+t).join(', ')||'not set';
             return reply('🌱 *LIFE OS STATUS*\nTimezone: '+s.timezone+'\nDay: '+life.getDayType(today)+'\nClasses: '+classes+
