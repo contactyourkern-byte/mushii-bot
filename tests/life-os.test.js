@@ -196,3 +196,14 @@ test('notification channel delivery is tracked independently and survives restar
     restarted.markNotificationSent('reminder:m1');
     assert.ok(restarted._getState().sentEvents['reminder:m1']);
 });
+
+test('Life OS version one data migrates while keeping the saved journal', async t => {
+    const filePath = await makePath(t);
+    const legacy = { version: 1, timezone: 'Africa/Kigali', journal: [{ id: 'j1', text: 'legacy note', createdAt: Date.now() }] };
+    await fs.writeFile(filePath, JSON.stringify(legacy));
+    const life = createLifeOS({ filePath });
+    assert.equal(life.exportState().version, 2);
+    assert.equal(life.searchJournal('legacy note')[0].id, 'j1');
+    assert.equal(life.listRecords().length, 0);
+    assert.equal(life.getSettings().aiCoach, false);
+});
