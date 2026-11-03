@@ -30,7 +30,7 @@ function android(title, text, notificationId) {
     ], { timeout: 7000 }, e => e ? reject(e) : resolve()));
 }
 function notificationContent(event) {
-    if (event.category === 'private' || /private check-in/i.test(event.title || '')) {
+    if (event.category === 'private' || /private.*check-in/i.test(event.title || '')) {
         return { title: 'MUSHII · Private reminder', text: 'Private check-in · 27 / 190' };
     }
     return {
