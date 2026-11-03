@@ -161,3 +161,26 @@ test('personal records persist, support search, update and deletion', async t =>
     assert.equal(second.deleteRecord(record.id), true);
     assert.equal(second.listRecords().length, 0);
 });
+
+test('daily and weekly reports summarize agenda, routines, goals and journal activity', async t => {
+    const filePath = await makePath(t);
+    const now = localDateTimeToEpoch('2026-11-03', '06:10', 'Africa/Kigali');
+    const life = createLifeOS({ filePath, now: () => now });
+    life.setDayType('morning', '2026-11-03');
+    life.setWeeklyClassType('tue', 'morning');
+    const next = life.getAgenda('2026-11-03')[0];
+    life.markAgendaItem('2026-11-03', next.id, 'done');
+    const routine = life.addRoutine('06:15', 'tue', 'Prayer review');
+    life.markRoutine('2026-11-03', routine.id, 'done');
+    life.addGoal('Finish semester project');
+    life.addJournalEntry('Daily review entry');
+    const daily = life.getDailyReport('2026-11-03');
+    assert.equal(daily.agenda.done, 1);
+    assert.equal(daily.routines.done, 1);
+    assert.equal(daily.goals.active, 1);
+    assert.equal(daily.journalEntries, 1);
+    const weekly = life.getWeeklyReport('2026-11-03');
+    assert.equal(weekly.days.length, 7);
+    assert.equal(weekly.totals.agendaDone, 1);
+    assert.equal(weekly.totals.routinesDone, 1);
+});
