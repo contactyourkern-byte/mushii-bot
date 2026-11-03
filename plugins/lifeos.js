@@ -65,7 +65,7 @@ async function deliver(sock, key, text, event = {}) {
                 await send(sock, text);
             } else if (channel === 'android') {
                 const content = notificationContent(event);
-                await android(content.title, content.text);
+                await android(content.title, content.text, key.slice(-50));
             } else if (channel === 'email') {
                 const to = String(process.env.LIFE_OS_EMAIL_TO || '').trim();
                 if (!to) throw new Error('LIFE_OS_EMAIL_TO is not configured.');
