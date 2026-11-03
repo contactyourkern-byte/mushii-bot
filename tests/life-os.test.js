@@ -148,3 +148,16 @@ test('missed reminders are marked so reconnect does not flood the owner', async 
     life.markNotificationMissed('reminder:' + reminder.id);
     assert.equal(life.listReminders()[0].status, 'missed');
 });
+
+test('personal records persist, support search, update and deletion', async t => {
+    const filePath = await makePath(t);
+    const first = createLifeOS({ filePath });
+    const record = first.addRecord('university', 'Software Engineering', 'Semester project notes');
+    assert.equal(first.listRecords('semester')[0].id, record.id);
+    const second = createLifeOS({ filePath });
+    assert.equal(second.listRecords()[0].title, 'Software Engineering');
+    assert.equal(second.updateRecord(record.id, { title: 'SE project', value: 'Updated notes' }), true);
+    assert.equal(second.listRecords()[0].value, 'Updated notes');
+    assert.equal(second.deleteRecord(record.id), true);
+    assert.equal(second.listRecords().length, 0);
+});
