@@ -582,19 +582,10 @@ async function connectToWhatsApp() {
             logMessage('WARN', `Connection closed: ${statusCode || 'Unknown'}${reason ? ` (${reason})` : ''}`);
 
             if (statusCode === DisconnectReason.loggedOut) {
-                // 401 — session explicitly invalidated by WhatsApp; must re-pair
-                logMessage('WARN', '⚠️ Session logged out by WhatsApp. Clearing session and reconnecting with QR...');
+                // Preserve all auth data. Never erase or rewrite the user's WhatsApp session automatically.
+                // A logged-out session requires an explicit owner-led re-pair flow.
                 _resetReconnect();
-                try {
-                    const files = fs.readdirSync(sessionDir);
-                    for (const f of files) {
-                        try { fs.unlinkSync(path.join(sessionDir, f)); } catch {}
-                    }
-                    logMessage('INFO', '🗑️ Old session files cleared.');
-                } catch (e) {
-                    logMessage('WARN', `Could not clear session: ${e.message}`);
-                }
-                _scheduleReconnect(() => connectToWhatsApp());
+                logMessage('ERROR', '⚠️ WhatsApp session is logged out. Existing session files were preserved; automatic reconnect is paused to protect credentials. Re-pair only after an explicit owner decision.');
             } else if (statusCode === 440) {
                 // 440 = replaced — another instance connected with the same session.
                 // Hard wait 90s to avoid a thrash loop between two running instances.
