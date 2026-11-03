@@ -196,8 +196,21 @@ loadPlugins();
 function setupConnectionHandlers(sock) {
     installNewsletterForwarding(sock);
     bindGroupCacheInvalidation(sock);
-    sock.ev.on('connection.update', ({ connection }) => {
-        if (connection === 'open') console.log('[Handler] WhatsApp connection open.');
+    sock.ev.on('connection.update', async ({ connection }) => {
+        if (connection === 'open') {
+            console.log('[Handler] WhatsApp connection open.');
+            for (const plugin of plugins) {
+                if (typeof plugin.onConnectionOpen !== 'function') continue;
+                try { await plugin.onConnectionOpen(sock); }
+                catch (error) { console.error('[Plugin lifecycle] onConnectionOpen failed:', error.message); }
+            }
+        } else if (connection === 'close') {
+            for (const plugin of plugins) {
+                if (typeof plugin.onConnectionClose !== 'function') continue;
+                try { await plugin.onConnectionClose(sock); }
+                catch (error) { console.error('[Plugin lifecycle] onConnectionClose failed:', error.message); }
+            }
+        }
     });
     sock.ev.on('group-participants.update', async (update) => {
         for (const p of plugins) {
