@@ -1,5 +1,6 @@
 'use strict';
 const { execFile } = require('node:child_process');
+const crypto = require('node:crypto');
 const { createLifeOS, localParts, localDateTimeToEpoch, validateDate } = require('../lib/life-os');
 const { createEncryptedBackup, decryptBackup } = require('../lib/life-os-backup');
 const google = require('../lib/life-os-google');
@@ -18,11 +19,11 @@ async function send(sock, text) {
     if (!jid) throw new Error('WhatsApp self chat unavailable');
     return sock.sendMessage(jid, { text: String(text).slice(0, 3500) });
 }
-function android(title, text) {
+function android(title, text, notificationId) {
     return new Promise((resolve, reject) => execFile('termux-notification', [
         '--title', String(title || 'MUSHII Life OS').slice(0, 80),
         '--content', String(text || '').replace(/\*/g, '').replace(/\n+/g, ' ').slice(0, 220),
-        '--id', 'mushii-life-os',
+        '--id', String(notificationId || 'mushii-life-os').slice(0, 60),
         '--priority', 'high',
         '--sound',
         '--vibrate', '200,300,200',
