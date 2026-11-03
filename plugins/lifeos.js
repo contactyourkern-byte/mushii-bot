@@ -404,6 +404,18 @@ async function runLife(sock,msg,args,ctx) {
             if(act==='timezone') return reply('✅ Timezone: '+life.setTimezone(p.join(' ')));
             if(act==='android') { if(!['on','off'].includes(v)) return reply('Use .life settings android on|off.'); life.setAndroidNotifications(v==='on'); return reply(v==='on'?'✅ Android pop-ups enabled; Termux:API app/package and permission required.':'✅ Android pop-ups disabled.'); }
             if(act==='dailyagenda') { if(!['on','off'].includes(v)) return reply('Use .life settings dailyagenda on|off [HH:MM].'); const x=life.setDailyAgenda(v==='on',p[1]||life.getSettings().dailyAgendaTime); return reply('✅ Daily agenda '+(x.enabled?'ON':'OFF')+' at '+x.time+'.'); }
+            if(act==='whatsapp') {
+                if(!['on','off'].includes(v)) return reply('Use .life settings whatsapp on|off.');
+                life.setWhatsAppNotifications(v==='on');
+                return reply('WhatsApp Life OS reminders '+v+'.');
+            }
+            if(act==='email') {
+                if(!['on','off'].includes(v)) return reply('Use .life settings email on|off.');
+                if(v==='on'&&!process.env.LIFE_OS_EMAIL_TO) return reply('Set LIFE_OS_EMAIL_TO in private config.env first.');
+                if(v==='on'&&!google.getStatus().connected) return reply('Connect Google first with .life google connect.');
+                life.setEmailNotifications(v==='on');
+                return reply('Email reminders '+v+'.');
+            }
             return reply('Settings: advance <min>, timezone <IANA>, dailyagenda on|off [HH:MM], android on|off.');
         }
         if(sec==='overview') return reply('🌱 *LIFE OS OVERVIEW*\nActive goals: '+life.listGoals().filter(x=>x.status==='active').length+
