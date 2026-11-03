@@ -76,3 +76,24 @@ test('backup content is compressed before encryption without exposing a plaintex
     assert.equal(backup.includes(Buffer.from('PRIVATE_JOURNAL_MARKER')), false);
     assert.deepEqual(decryptBackup(backup, password), state);
 });
+
+test('Google integration stays disconnected and rejects OAuth until private client config exists', () => {
+    const oldId = process.env.LIFE_OS_GOOGLE_CLIENT_ID;
+    const oldSecret = process.env.LIFE_OS_GOOGLE_CLIENT_SECRET;
+    delete process.env.LIFE_OS_GOOGLE_CLIENT_ID;
+    delete process.env.LIFE_OS_GOOGLE_CLIENT_SECRET;
+    try {
+        const google = require('../lib/life-os-google');
+        assert.equal(google.getStatus().connected, false);
+        assert.throws(() => google.beginOAuth(), /not configured/);
+        assert.deepEqual(google.SCOPES, [
+            'https://www.googleapis.com/auth/drive.file',
+            'https://www.googleapis.com/auth/gmail.send',
+        ]);
+    } finally {
+        if (oldId === undefined) delete process.env.LIFE_OS_GOOGLE_CLIENT_ID;
+        else process.env.LIFE_OS_GOOGLE_CLIENT_ID = oldId;
+        if (oldSecret === undefined) delete process.env.LIFE_OS_GOOGLE_CLIENT_SECRET;
+        else process.env.LIFE_OS_GOOGLE_CLIENT_SECRET = oldSecret;
+    }
+});
