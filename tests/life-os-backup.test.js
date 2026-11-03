@@ -77,6 +77,25 @@ test('backup content is compressed before encryption without exposing a plaintex
     assert.deepEqual(decryptBackup(backup, password), state);
 });
 
+test('Google Drive multipart backup targets the upload endpoint and keeps binary data intact', () => {
+    const google = require('../lib/life-os-google');
+    const encrypted = Buffer.from('encrypted-backup-bytes');
+    const request = google.__test.buildMultipartUploadRequest(encrypted, 'mushii-life-os-test.json.enc');
+    assert.match(request.url, /^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files\?uploadType=multipart/);
+    assert.equal(request.options.method, 'POST');
+    const contentType = request.options.headers['Content-Type'];
+    const boundary = contentType.match(/boundary=(.+)$/)?.[1];
+    assert.ok(boundary);
+    assert.ok(request.options.body.includes(Buffer.from('--' + boundary + '\\r\\nContent-Type: application/json')));
+    assert.ok(request.options.body.includes(Buffer.from(JSON.stringify({
+        name: 'mushii-life-os-test.json.enc',
+        description: 'Encrypted MUSHII Life OS personal data backup',
+    }))));
+    assert.ok(request.options.body.includes(encrypted));
+    assert.ok(request.options.body.includes(Buffer.from('\\r\\n--' + boundary + '--')));
+    assert.equal(Number(request.options.headers['Content-Length']), request.options.body.length);
+});
+
 test('Google integration stays disconnected and rejects OAuth until private client config exists', () => {
     const oldId = process.env.LIFE_OS_GOOGLE_CLIENT_ID;
     const oldSecret = process.env.LIFE_OS_GOOGLE_CLIENT_SECRET;
