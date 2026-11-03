@@ -95,6 +95,11 @@ function createBackup() {
     if (!passphrase) throw new Error('Set LIFE_OS_BACKUP_PASSPHRASE in private config.env before creating or restoring encrypted backups.');
     return createEncryptedBackup(life.exportState(), passphrase);
 }
+async function recoverBackup(fileId) {
+    const backup = await google.downloadBackup(fileId);
+    const state = decryptBackup(backup, String(process.env.LIFE_OS_BACKUP_PASSPHRASE || ''));
+    return life.importState(state);
+}
 async function uploadData() {
     const bytes = createBackup();
     const date = life.getDateKey();
