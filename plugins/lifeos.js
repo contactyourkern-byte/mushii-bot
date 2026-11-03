@@ -1,9 +1,13 @@
 'use strict';
 const { execFile } = require('node:child_process');
 const { createLifeOS, localParts, localDateTimeToEpoch, validateDate } = require('../lib/life-os');
+const { createEncryptedBackup, decryptBackup } = require('../lib/life-os-backup');
+const google = require('../lib/life-os-google');
 const life = createLifeOS();
 let socket = null, timer = null, busy = false;
 const retry = new Map();
+const BACKUP_DIRECTORY = require('node:path').join(__dirname, '..', 'data', 'life-os-backups');
+const aiCoach = require('../lib/agent-v2');
 
 function self(sock) {
     const jid = sock && sock.user && sock.user.id || global.botJid || '';
@@ -14,11 +18,114 @@ async function send(sock, text) {
     if (!jid) throw new Error('WhatsApp self chat unavailable');
     return sock.sendMessage(jid, { text: String(text).slice(0, 3500) });
 }
-function android(text) {
+function android(title, text) {
     return new Promise((resolve, reject) => execFile('termux-notification', [
-        '--title', 'MUSHII Life OS', '--content', String(text).replace(/\*/g, '').replace(/\n+/g, ' ').slice(0, 220),
-        '--id', 'mushii-life-os'
-    ], { timeout: 5000 }, e => e ? reject(e) : resolve()));
+        '--title', String(title || 'MUSHII Life OS').slice(0, 80),
+        '--content', String(text || '').replace(/\*/g, '').replace(/\n+/g, ' ').slice(0, 220),
+        '--id', 'mushii-life-os',
+        '--priority', 'high',
+        '--sound',
+        '--vibrate', '200,300,200',
+    ], { timeout: 7000 }, e => e ? reject(e) : resolve()));
+}
+function notificationContent(event) {
+    if (event.category === 'private' || /private check-in/i.test(event.title || '')) {
+        return { title: 'MUSHII · Private reminder', text: 'Private check-in · 27 / 190' };
+    }
+    return {
+        title: event.kind === 'reminder' ? 'MUSHII · Personal reminder' : 'MUSHII · Next action',
+        text: [event.time, event.title].filter(Boolean).join(' · '),
+    };
+}
+function notificationTargets(settings) {
+    return [
+        settings.whatsappNotifications ? 'whatsapp' : null,
+        settings.androidNotifications ? 'android' : null,
+        settings.emailNotifications ? 'email' : null,
+    ].filter(Boolean);
+}
+async function deliver(sock, key, text, event = {}) {
+    const settings = life.getSettings();
+    const targets = notificationTargets(settings);
+    if (!targets.length) {
+        life.markNotificationSent(key);
+        return;
+    }
+    const delivery = life.getNotificationDelivery(key);
+    const waitKey = key + ':channels';
+    if ((retry.get(waitKey) || 0) > Date.now()) return;
+    const results = { ...delivery };
+    let failed = false;
+    for (const channel of targets) {
+        if (results[channel]) continue;
+        try {
+            if (channel === 'whatsapp') {
+                if (!sock || !self(sock)) continue;
+                await send(sock, text);
+            } else if (channel === 'android') {
+                const content = notificationContent(event);
+                await android(content.title, content.text);
+            } else if (channel === 'email') {
+                const to = String(process.env.LIFE_OS_EMAIL_TO || '').trim();
+                if (!to) throw new Error('LIFE_OS_EMAIL_TO is not configured.');
+                const content = notificationContent(event);
+                await google.sendEmail({
+                    to,
+                    subject: content.title,
+                    text: content.text + '\n\nOpen MUSHII Life OS in WhatsApp for details.',
+                });
+            }
+            life.markNotificationChannelSent(key, channel);
+            results[channel] = Date.now();
+        } catch (error) {
+            failed = true;
+            console.warn('[LifeOS] ' + channel + ' notification failed: ' + String(error.message || error).slice(0, 180));
+        }
+    }
+    const complete = targets.every(channel => results[channel]);
+    if (complete) {
+        life.markNotificationSent(key);
+        retry.delete(waitKey);
+    } else if (failed) {
+        retry.set(waitKey, Date.now() + 60000);
+    }
+}
+function createBackup() {
+    const passphrase = String(process.env.LIFE_OS_BACKUP_PASSPHRASE || '');
+    if (!passphrase) throw new Error('Set LIFE_OS_BACKUP_PASSPHRASE in private config.env before creating or restoring encrypted backups.');
+    return createEncryptedBackup(life.exportState(), passphrase);
+}
+async function uploadData() {
+    const bytes = createBackup();
+    const date = life.getDateKey();
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const result = await google.uploadBackup(bytes, 'mushii-life-os-' + date + '-' + stamp + '.json.enc');
+    return { ...result, bytes: bytes.length };
+}
+function saveLocalBackup(bytes, filename) {
+    const fs = require('node:fs');
+    fs.mkdirSync(BACKUP_DIRECTORY, { recursive: true, mode: 0o700 });
+    const file = require('node:path').join(BACKUP_DIRECTORY, filename);
+    fs.writeFileSync(file, bytes, { mode: 0o600, flag: 'wx' });
+    return file;
+}
+async function runAutoBackup(now) {
+    const settings = life.getSettings();
+    if (!settings.autoBackup || !process.env.LIFE_OS_BACKUP_PASSPHRASE || !google.getStatus().connected) return;
+    const local = localParts(now, settings.timezone);
+    if (local.time < settings.autoBackupTime) return;
+    const key = 'drive-backup:' + local.date;
+    if (life._getState().sentEvents[key]) return;
+    if ((retry.get(key) || 0) > now) return;
+    try {
+        const result = await uploadData();
+        life.markNotificationSent(key);
+        retry.delete(key);
+        console.log('[LifeOS] Encrypted automatic Drive backup uploaded: ' + result.name);
+    } catch (error) {
+        retry.set(key, now + 30 * 60 * 1000);
+        console.warn('[LifeOS] Automatic backup pending: ' + String(error.message || error).slice(0, 180));
+    }
 }
 function plus(date, n) {
     const d = date.split('-').map(Number);
@@ -38,47 +145,57 @@ function nextText(x) {
         (x.phase==='overdue'?'Complete, skip or reschedule this task.':'Stay with this one task before switching.')+
         '\n\n.next done · .next skip · .next delay <minutes>';
 }
-async function deliver(sock,key,text) {
-    if((retry.get(key)||0)>Date.now()) return;
-    try {
-        await send(sock,text); life.markNotificationSent(key); retry.delete(key);
-        if(life.getSettings().androidNotifications) {
-            try { await android(text); } catch { console.warn('[LifeOS] Android pop-up unavailable; WhatsApp reminder sent.'); }
-        }
-    } catch { retry.set(key,Date.now()+30000); console.warn('[LifeOS] Reminder delivery failed; retry scheduled.'); }
-}
-async function tick(sock) {
-    if(busy||sock!==socket) return;
+async function tick(sock = socket) {
+    if (busy) return;
     busy=true;
     try {
-        const now=Date.now(), s=life.getSettings(), local=localParts(now,s.timezone), sent=life._getState().sentEvents;
-        const k='morning-agenda:'+local.date;
-        if(s.dailyAgenda&&!sent[k]&&local.time>=s.dailyAgendaTime) {
-            const due=localDateTimeToEpoch(local.date,s.dailyAgendaTime,s.timezone);
-            if(now-due>90*60000) life.markNotificationMissed(k);
-            else await deliver(sock,k,agenda(local.date)+'\n\n🌅 *Start with your next action.*');
+        const now = Date.now(), settings = life.getSettings(), local = localParts(now, settings.timezone);
+        const sent = life._getState().sentEvents;
+        const agendaKey = 'morning-agenda:' + local.date;
+        if (settings.dailyAgenda && !sent[agendaKey] && local.time >= settings.dailyAgendaTime) {
+            const dueAt = localDateTimeToEpoch(local.date, settings.dailyAgendaTime, settings.timezone);
+            if (now - dueAt > 90 * 60000) life.markNotificationMissed(agendaKey);
+            else await deliver(sock, agendaKey, agenda(local.date) + '\n\n🌅 *Start with your next action.*', {
+                kind: 'agenda', title: 'Your daily agenda is ready',
+            });
         }
-        const due=life.getDueNotifications(now);
-        due.stale.forEach(x=>life.markNotificationMissed(x));
-        for(const e of due.events.slice(0,4)) {
-            const label=e.kind==='routine'?'🔁 *ROUTINE REMINDER*':e.kind==='agenda'?'⏰ *NEXT ACTION*':'🔔 *PERSONAL REMINDER*';
-            await deliver(sock,e.key,label+'\n\n*'+e.time+' — '+e.title+'*\n\nUse .next or .life agenda.');
+        const due = life.getDueNotifications(now);
+        due.stale.forEach(key => life.markNotificationMissed(key));
+        for (const event of due.events.slice(0, 4)) {
+            const label = event.kind === 'routine' ? '🔁 *ROUTINE REMINDER*'
+                : event.kind === 'agenda' ? '⏰ *NEXT ACTION*' : '🔔 *PERSONAL REMINDER*';
+            const details = event.category === 'private' ? 'Private check-in · 27 / 190' : event.title;
+            await deliver(sock, event.key,
+                label + '\n\n*' + event.time + ' — ' + details + '*\n\nUse .next or .life agenda.', event);
         }
+        await runAutoBackup(now);
     } catch(e) { console.warn('[LifeOS] Scheduler error: '+e.message); }
     finally { busy=false; }
 }
-function stop(sock) {
-    if(sock&&socket&&sock!==socket) return;
-    if(timer) clearInterval(timer);
-    timer=null; socket=null; retry.clear();
+function stopScheduler() {
+    if (timer) clearInterval(timer);
+    timer = null;
+    socket = null;
+    retry.clear();
+}
+function ensureScheduler() {
+    if (timer) return;
+    timer = setInterval(() => tick(socket).catch(() => {}), 15000);
+    if (typeof timer.unref === 'function') timer.unref();
 }
 async function onConnectionOpen(sock) {
-    if(!sock||!sock.user||!sock.user.id) return;
-    if(socket===sock&&timer) return;
-    stop(); socket=sock; await tick(sock);
-    timer=setInterval(()=>tick(sock).catch(()=>{}),15000);
+    if (!sock || !sock.user || !sock.user.id) return;
+    socket = sock;
+    ensureScheduler();
+    await tick(sock);
 }
-function onConnectionClose(sock) { stop(sock); }
+function onConnectionClose(sock) {
+    if (sock && socket && sock !== socket) return;
+    socket = null;
+    // Local Android reminders and automatic backups continue while WhatsApp is disconnected.
+    ensureScheduler();
+}
+ensureScheduler();
 
 function listGoals() {
     const a=life.listGoals();
