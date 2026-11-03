@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const R = require('../lib/research-engine');
+process.env.OWNER_NUMBER ||= '250788123456';
 const P = require('../plugins/research-engine');
 
 test('KERN contains separate cybercrime and all three luxury pillars', () => {
