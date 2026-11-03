@@ -496,5 +496,5 @@ module.exports = {
     description:'Owner-only private Life OS: agenda, routines, reminders, goals, journal and next action',
     permission:'owner', group:false, private:true, onConnectionOpen, onConnectionClose,
     run:async(sock,msg,args,ctx)=>{ const command=String(ctx.command||'').toLowerCase(); if(command==='next') return runNext(sock,msg,args,ctx); if(command==='agenda') return runLife(sock,msg,['agenda',...(args||[])],ctx); return runLife(sock,msg,args,ctx); },
-    __test:{life,agenda,nextText,tick,stop,android}
+    __test:{life,agenda,nextText,tick,stop:stopScheduler,android}
 };
