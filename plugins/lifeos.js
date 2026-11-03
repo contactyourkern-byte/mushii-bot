@@ -293,6 +293,44 @@ async function runLife(sock,msg,args,ctx) {
         }
         if(sec==='code') { const status=(p.shift()||'').toLowerCase(), x=life.recordCheckin(act,status,p.join(' ')); return reply('✅ Private code *'+x.code+'* check-in saved: *'+x.status+'*.'); }
         if(sec==='codes') { const a=life.getCheckins(14); return reply(a.length?'🔐 *PRIVATE CHECK-INS*\n'+a.map(x=>x.date+' · '+x.code+' · '+x.status).join('\n'):'No check-ins yet.'); }
+        if(sec==='record'||sec==='records') {
+            if(act==='add') {
+                const fields=p.join(' ').split('|').map(x=>x.trim());
+                if(fields.length<3) return reply('Use .life record add <category> | <title> | <value>.');
+                const x=life.addRecord(fields[0],fields[1],fields.slice(2).join(' | '));
+                return reply('📌 Record saved: *'+x.id+'* · '+x.category+' · '+x.title);
+            }
+            if(act==='list'||!act) {
+                const a=life.listRecords(p.join(' '));
+                return reply(a.length?'📚 *PERSONAL RECORDS*\n'+a.map(x=>'*'+x.id+'* · '+x.category+'\n'+x.title).join('\n\n'):'No matching personal records.');
+            }
+            if(act==='show') {
+                const x=life.listRecords().find(item=>item.id===p[0]);
+                return reply(x?'📌 *'+x.title+'*\nCategory: '+x.category+'\n'+x.value:'Record not found.');
+            }
+            if(act==='edit') {
+                const fields=p.join(' ').split('|').map(x=>x.trim()), id=fields.shift();
+                if(fields.length<3) return reply('Use .life record edit <id> | <category> | <title> | <value>.');
+                return reply(life.updateRecord(id,{category:fields[0],title:fields[1],value:fields.slice(2).join(' | ')})?'✅ Record updated.':'Record not found.');
+            }
+            if(act==='delete') return reply(life.deleteRecord(p[0])?'✅ Record deleted.':'Record not found.');
+            return reply('.life record add|list|show|edit|delete ...');
+        }
+        if(sec==='report') {
+            if(act==='week'||act==='weekly') {
+                const r=life.getWeeklyReport(validateDate(p[0])?p[0]:today);
+                return reply('📊 *WEEKLY LIFE OS REPORT*\n'+r.startDate+' → '+r.endDate+
+                    '\nAgenda: '+r.totals.agendaDone+'/'+r.totals.agendaTotal+' completed'+
+                    '\nRoutines: '+r.totals.routinesDone+'/'+r.totals.routinesTotal+' completed'+
+                    '\n\n'+r.days.map(d=>d.date+' · agenda '+d.agenda.done+'/'+d.agenda.total+' · routines '+d.routines.done+'/'+d.routines.total).join('\n'));
+            }
+            const r=life.getDailyReport(validateDate(act)?act:today);
+            return reply('📊 *DAILY LIFE OS REPORT*\n'+r.date+' · '+r.dayType+
+                '\nAgenda: '+r.agenda.done+'/'+r.agenda.total+' done · '+r.agenda.skipped+' skipped · '+r.agenda.pending+' pending'+
+                '\nRoutines: '+r.routines.done+'/'+r.routines.total+' done · '+r.routines.skipped+' skipped · '+r.routines.pending+' pending'+
+                '\nGoals: '+r.goals.done+' done · '+r.goals.active+' active'+
+                '\nJournal entries: '+r.journalEntries);
+        }
         if(sec==='focus') { if(!['on','off'].includes(act)) return reply('Focus reminders: '+(life.getSettings().focusMode?'ON':'OFF')); life.setFocusMode(act==='on'); return reply(act==='on'?'🎯 Focus reminders ON. This does not block phone apps.':'✅ Focus reminders OFF.'); }
         if(sec==='settings') {
             const v=(p[0]||'').toLowerCase();
