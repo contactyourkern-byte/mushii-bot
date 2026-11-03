@@ -78,3 +78,9 @@ Pair-code commands remain unavailable until the operator supplies their own `PAI
 Repository: https://github.com/contactyourkern-byte/mushii-bot
 
 See [LICENSE](LICENSE) for the existing license and attribution.
+
+## MUSHII Life OS (owner only)
+
+MUSHII Life OS adds private daily agendas, next actions, recurring routines, reminders, goals, journal entries, personal records and daily/weekly reviews. It uses Africa/Kigali by default and sends reminders through WhatsApp, with optional Android pop-ups and Gmail delivery. Encrypted Life OS backups can be saved locally and uploaded to Google Drive.
+
+See [docs/life-os.md](docs/life-os.md) for command reference, Google OAuth setup, notification requirements, privacy details and backup instructions. Life OS commands are owner-only and private-chat-only. Google authorization and the backup passphrase are configured privately on the device; never commit tokens, passphrases, WhatsApp session files or config.env.
