@@ -99,7 +99,12 @@ function createBackup() {
 async function recoverBackup(fileId) {
     const backup = await google.downloadBackup(fileId);
     const state = decryptBackup(backup, String(process.env.LIFE_OS_BACKUP_PASSPHRASE || ''));
-    return life.importState(state);
+    // Save a second encrypted snapshot of the current data before replacing anything.
+    const safetySnapshot = createBackup();
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const safetyFile = saveLocalBackup(safetySnapshot, 'mushii-life-os-pre-restore-' + stamp + '.json.enc');
+    const result = life.importState(state);
+    return { ...result, safetyFile };
 }
 async function uploadData() {
     const bytes = createBackup();
