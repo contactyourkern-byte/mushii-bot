@@ -62,7 +62,7 @@ For local notifications, enable .life settings android on. For WhatsApp reminder
 
 Install the Termux:API Android app from a trusted source and install the matching Termux package using pkg install termux-api. Grant notification permission to Termux:API and enable notifications in Android settings. Then run .life settings android on.
 
-The scheduler is started with the Life OS plugin and continues local Android notification checks while WhatsApp is disconnected, provided the Node process is still running. Android may stop background processes under battery optimization. For reminders after a reboot, use Termux:Boot and configure a safe startup script. A stopped Termux process cannot deliver a popup.
+The scheduler is started with the Life OS plugin and continues local Android notification checks while WhatsApp is disconnected, provided the Node process is still running. Android may stop background processes under battery optimization. A stopped Termux process cannot deliver a popup. Do not configure Termux:Boot to launch the whole bot automatically until its WhatsApp logout/session cleanup path has been audited and made non-destructive; first verify a safe startup flow for the existing session.
 
 Private code reminders use only the generic text "Private check-in · 27 / 190" on the Android notification surface; private notes are not included.
 
