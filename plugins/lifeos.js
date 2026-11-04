@@ -99,8 +99,8 @@ function purposeReminderText(slot,date){
   evening:[
    ['EVENING REVIEW · FINISH WITH INTENTION','What did you advance today: learning, content, health or discipline?','Review your money choices (27), personal boundaries (190) and emotional discipline.','Close public chats, prepare tomorrow’s first task and be in bed before midnight.','ISUZUMA RYO KU NIMUGOROBA · SOZA UFITE INTEGO','Ni iki wateje imbere uyu munsi: amasomo, content, ubuzima cyangwa discipline?','Suzuma uko warinze amafaranga (27), amahame yawe (190), n’uko wagenzuye amarangamutima.','Soza ibiganiro rusange, tegura igikorwa cya mbere cy’ejo kandi uryame mbere ya saa sita z’ijoro.']
  };
- const a=sets[slot]||sets.morning,mid=Math.ceil(a.length/2),en=a.slice(0,mid).join('\\n\\n'),rw=a.slice(mid).join('\\n\\n');
- return header('YOUR DAILY DIRECTION · '+slot.toUpperCase(),date)+'\\n'+(lang()==='en'?en:lang()==='rw'?rw:en+'\\n\\n'+rw);
+ const a=sets[slot]||sets.morning,mid=Math.ceil(a.length/2),en=a.slice(0,mid).join('\n\n'),rw=a.slice(mid).join('\n\n');
+ return header('YOUR DAILY DIRECTION · '+slot.toUpperCase(),date)+'\n'+(lang()==='en'?en:lang()==='rw'?rw:en+'\n\n'+rw);
 }
 async function runPurposeReminders(sock,now,local){
  const settings=life.getSettings();
