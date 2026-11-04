@@ -364,7 +364,7 @@ function help() {
         '.life agenda [tomorrow|YYYY-MM-DD]',
         '.life day <class-morning|class-afternoon|free-day|special> [date]',
         '.life choose <class-morning|class-afternoon|free-day|special>',
-        '.life special add <HH:MM> <duration> <task> · list · remove <id>',
+        '.life special add [YYYY-MM-DD] <HH:MM> <duration> <task> · list [date] · remove [date] <id>',
         '.life templates · .life template <name> [date] · .timeline',
         '.life pillars · .life pillar <id> <0-100> [note]',
         '.life prevention add <trigger> | <response> [| pillar-id] · list · delete <id>',
@@ -407,13 +407,20 @@ async function runLife(sock,msg,args,ctx) {
         }
         if(sec==='special'){
             if(act==='add'){
+                const date=validateDate(p[0])?p.shift():today;
                 const [time,duration,...title]=p;
-                const id=life.addDayAgendaItem(today,time,duration,title.join(' '));
-                return reply('✅ *SPECIAL DAY TASK SAVED · INSHINGANO YABITSWE*\n*'+time+'* — '+title.join(' ')+'\nID: '+id+'\n\n'+agenda(today));
+                const id=life.addDayAgendaItem(date,time,duration,title.join(' '));
+                return reply('✅ *SPECIAL DAY TASK SAVED · INSHINGANO YABITSWE*\n'+date+' · *'+time+'* — '+title.join(' ')+'\nID: '+id+'\n\n'+agenda(date));
             }
-            if(act==='remove')return reply(life.removeDayAgendaItem(today,p[0])?'✅ Special-day task removed.':'Task not found.');
-            if(act==='list'||!act)return reply(agenda(today));
-            return reply('Use .life special add <HH:MM> <duration-minutes> <task> · list · remove <id>.');
+            if(act==='remove'){
+                const date=validateDate(p[0])?p.shift():today;
+                return reply(life.removeDayAgendaItem(date,p[0])?'✅ Special-day task removed.':'Task not found.');
+            }
+            if(act==='list'||!act){
+                const date=validateDate(p[0])?p[0]:today;
+                return reply(agenda(date));
+            }
+            return reply('Use .life special add [YYYY-MM-DD] <HH:MM> <duration-minutes> <task> · list [date] · remove [date] <id>.');
         }
         if(sec==='templates')return reply(header('SPECIAL DAY TEMPLATES')+'\nexam · assignment · meeting · birthday · travel · project · reset · worship · review · achievement\n\n.life template exam [YYYY-MM-DD]');
         if(sec==='template'){
