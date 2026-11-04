@@ -252,12 +252,20 @@ function agenda(date) {
         (x.status==='done'?'✅':x.status==='skipped'?'↪️':'▫️')+' *'+x.time+'* — '+x.title+' _['+x.id+']_'
     ).join('\n')+'\n\nUse .next for your next action.';
 }
+function whyThisMatters(item){
+ const category=String(item.category||'').toLowerCase();
+ if(category==='university'||category==='education')return say('This strengthens your Software Engineering skills and your long-term options.','Iki gikorwa gikomeza ubumenyi bwawe muri Software Engineering kandi kigafungura amahirwe y’ejo hazaza.');
+ if(category==='career'||category==='deep-work')return say('Consistent creation moves your channel toward its three-year goal.','Gukora content buri gihe bituma channel yawe igana ku ntego y’imyaka itatu.');
+ if(category==='communication')return say('A planned chat window lets you stay connected without surrendering your focus.','Igihe cyateganyijwe cyo kuganira kigufasha kugumana abantu utatakaje umwanya wo kwibanda.');
+ if(category==='health'||category==='rest'||category==='foundation')return say('Your health, prayer and rest support every other goal.','Ubuzima, gusenga no kuruhuka bishyigikira izindi ntego zawe zose.');
+ if(category==='private')return say('This protects your commitments, personal boundaries and direction.','Iki gikorwa kirinda amasezerano yawe, amahame yawe n’icyerekezo cyawe.');
+ return say('Small completed steps create reliable progress.','Intambwe nto urangije zibyara iterambere rirambye.');
+}
 function nextText(x) {
-    if(!x) return '✅ *No more pending agenda tasks today.*';
-    const phase=x.phase==='current'?'NOW':x.phase==='overdue'?'PENDING — DECIDE':'UP NEXT';
-    return '🎯 *NEXT ACTION · '+phase+'*\n\n*'+x.time+' — '+x.title+'*\n'+
-        (x.phase==='overdue'?'Complete, skip or reschedule this task.':'Stay with this one task before switching.')+
-        '\n\n.next done · .next skip · .next delay <minutes>';
+ if(!x)return header('NEXT ACTION · RESET','✅')+'\n'+say('Your planned tasks are complete. Review the day, care for yourself and protect your sleep.','Ibikorwa wari wateganyije birarangiye. Suzuma umunsi, wiyiteho kandi urinde ibitotsi byawe.');
+ const phase=x.phase==='current'?'NOW · URIMO':x.phase==='overdue'?'OVERDUE · HITAMO':'UP NEXT · IGIKURIKIRA';
+ const status=x.phase==='overdue'?say('This task is overdue. Complete it, skip it with a reason, or reschedule it honestly.','Igihe cy’iki gikorwa cyarenze. Kirangize, gisimbuke utange impamvu, cyangwa ugishyire ku yindi saha.'):say('Give this task your attention. Avoid switching to non-urgent chats until the block is complete.','Iki gikorwa gihe umwanya wawe. Irinde kugana ibiganiro bitihutirwa kugeza iki gikorwa kirangiye.');
+ return header('NEXT ACTION · '+phase,x.date)+'\n\n⏰ *'+x.time+' — '+x.title+'*\n\n'+status+'\n\n💡 *WHY IT MATTERS*\n'+whyThisMatters(x)+'\n\n.next done\n.next skip [reason]\n.next delay 10\n.next reschedule 14:30';
 }
 async function tick(sock = socket) {
     if (busy) return;
