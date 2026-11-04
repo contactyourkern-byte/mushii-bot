@@ -458,8 +458,10 @@ async function runLife(sock,msg,args,ctx) {
                 '\nWhatsApp: '+(s.whatsappNotifications?'ON':'OFF')+'\nAndroid pop-up: '+(s.androidNotifications?'ON':'OFF')+
                 '\nEmail: '+(s.emailNotifications?'ON':'OFF')+'\nAuto Drive backup: '+(s.autoBackup?'ON':'OFF')+' at '+s.autoBackupTime+
                 '\nAI Life Coach: '+(s.aiCoach?'ON':'OFF')+'\nFocus: '+(s.focusMode?'ON':'OFF')+
+                '\nPurpose reminders: '+(s.purposeReminders?'ON':'OFF')+' ('+Object.values(s.purposeReminderTimes||{}).join(', ')+')'+
                 '\nGoogle: '+(google.getStatus().connected?'connected':'not connected')+'\n\n'+nextText(life.getNextAction()));
         }
+        if(sec==='timeline') return reply(agenda(today));
         if(sec==='agenda') {
             if(!act||act==='today'||act==='show') return reply(agenda(today));
             if(act==='tomorrow') return reply(agenda(plus(today,1)));
@@ -744,9 +746,9 @@ async function runNext(sock,msg,args,ctx) {
     return ctx.reply(nextText(x));
 }
 module.exports = {
-    commands:['life','agenda','next'],
+    commands:['life','agenda','next','timeline'],
     description:'Owner-only private Life OS: agenda, routines, reminders, goals, journal and next action',
     permission:'owner', group:false, private:true, onConnectionOpen, onConnectionClose,
-    run:async(sock,msg,args,ctx)=>{ const command=String(ctx.command||'').toLowerCase(); if(command==='next') return runNext(sock,msg,args,ctx); if(command==='agenda') return runLife(sock,msg,['agenda',...(args||[])],ctx); return runLife(sock,msg,args,ctx); },
+    run:async(sock,msg,args,ctx)=>{ const command=String(ctx.command||'').toLowerCase(); if(command==='next') return runNext(sock,msg,args,ctx); if(command==='agenda'||command==='timeline') return runLife(sock,msg,[command==='timeline'?'timeline':'agenda',...(args||[])],ctx); return runLife(sock,msg,args,ctx); },
     __test:{life,agenda,nextText,tick,stop:stopScheduler,android}
 };
