@@ -502,8 +502,43 @@ async function runLife(sock,msg,args,ctx) {
                 '\nRecipient configured: '+(Boolean(process.env.LIFE_OS_EMAIL_TO)?'yes':'no')+
                 '\nGoogle connected: '+(google.getStatus().connected?'yes':'no'));
             if(act==='test') {
-                await google.sendEmail({to:process.env.LIFE_OS_EMAIL_TO,subject:'MUSHII Life OS test',text:'Your MUSHII Life OS email connection is working.'});
+                await google.sendEmail({to:process.env.LIFE_OS_EMAIL_TO,subject:'MUSHII Life OS | Email connection test',text:'Hello,\\n\\nYour MUSHII Life OS email connection is working.\\n\\nKind regards,\\nMUSHII Life OS'});
                 return reply('Test email sent. Check the configured inbox.');
+            }
+            if(act==='daily'||act==='agenda') {
+                const report=life.getDailyReport(today),next=life.getNextAction();
+                const goals=life.listGoals().filter(x=>x.status==='active');
+                const pillars=life.listPillars();
+                const plans=life.listPreventionPlans().filter(x=>x.active);
+                const body=[
+                    'Hello,',
+                    '',
+                    'Here is your MUSHII Life OS daily briefing.',
+                    '',
+                    'DATE: '+today+' | DAY TYPE: '+life.getDayType(today),
+                    '',
+                    'TODAY’S AGENDA',
+                    ...life.getAgenda(today).map(x=>x.time+'  '+x.title+' ['+x.status+']'),
+                    '',
+                    'NEXT ACTION',
+                    next?next.time+' — '+next.title:'No pending agenda item.',
+                    '',
+                    'PRIORITY GOALS',
+                    ...(goals.length?goals.map(x=>'• '+x.title):['No active goals recorded.']),
+                    '',
+                    'LIFE PILLARS',
+                    ...pillars.map(x=>'• '+x.name+': '+x.progress+'%'),
+                    '',
+                    'PREVENTION PLAN COUNT: '+plans.length,
+                    'PROGRESS: Agenda '+report.agenda.done+'/'+report.agenda.total+' complete; routines '+report.routines.done+'/'+report.routines.total+' complete.',
+                    '',
+                    'Take the day one priority at a time. Review or adjust your schedule in WhatsApp with MUSHII Life OS.',
+                    '',
+                    'Kind regards,',
+                    'MUSHII Life OS'
+                ].join('\\n');
+                await google.sendEmail({to:process.env.LIFE_OS_EMAIL_TO,subject:'MUSHII Life OS | Daily plan · '+today,text:body});
+                return reply('📧 Professional daily briefing sent to your configured inbox.');
             }
             return reply('.life email status|test. Set LIFE_OS_EMAIL_TO privately, then enable .life settings email on.');
         }
