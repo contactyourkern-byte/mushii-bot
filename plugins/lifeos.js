@@ -4,6 +4,7 @@ const { createLifeOS, localParts, localDateTimeToEpoch, validateDate } = require
 const { createEncryptedBackup, decryptBackup } = require('../lib/life-os-backup');
 const google = require('../lib/life-os-google');
 const life = createLifeOS();
+// PURPOSE_SEED_PLACEHOLDER
 let socket = null, timer = null, busy = false;
 const retry = new Map();
 const BACKUP_DIRECTORY = require('node:path').join(__dirname, '..', 'data', 'life-os-backups');
