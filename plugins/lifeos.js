@@ -33,17 +33,17 @@ const PSALMS=[
  ['Psalm 37:5','Commit your plans, then do your part with patience and integrity.','Shyira imigambi yawe mu maboko y’Imana, ukore uruhare rwawe wihanganye.']
 ];
 function lang(){return life.getSettings().language||'bilingual';}
-function say(en,rw){return lang()==='en'?en:lang()==='rw'?rw:en+'\\n'+rw;}
-function header(title,sub=''){return '🌱 *MUSHII LIFE OS*\\n━━━━━━━━━━━━━━━━━━━━\\n*'+title+'*'+(sub?'\\n'+sub:'')+'\\n━━━━━━━━━━━━━━━━━━━━';}
+function say(en,rw){return lang()==='en'?en:lang()==='rw'?rw:en+'\n'+rw;}
+function header(title,sub=''){return '🌱 *MUSHII LIFE OS*\n━━━━━━━━━━━━━━━━━━━━\n*'+title+'*'+(sub?'\n'+sub:'')+'\n━━━━━━━━━━━━━━━━━━━━';}
 function dailyPsalm(date=life.getDateKey()){
  const p=PSALMS[Number(date.replace(/-/g,''))%PSALMS.length],l=lang();
- return header((LANG[l]||LANG.bilingual).psalm,'📖 '+p[0])+'\\n'+(l==='en'?p[1]:l==='rw'?p[2]:p[1]+'\\n'+p[2]);
+ return header((LANG[l]||LANG.bilingual).psalm,'📖 '+p[0])+'\n'+(l==='en'?p[1]:l==='rw'?p[2]:p[1]+'\n'+p[2]);
 }
 function dayPrompt(date){
  const l=lang(),t=LANG[l]||LANG.bilingual;
  const types=['focus','study','work','home','travel','spiritual','rest','free','sunday'];
  const rw={focus:'Kwibanda',study:'Kwiga',work:'Akazi',home:'Murugo',travel:'Urugendo',spiritual:'Iby’umwuka',rest:'Kuruhuka',free:'Bisanzwe',sunday:'Ku cyumweru'};
- return header(t.morning+' ☀️',date)+'\\n'+t.choose+'\\n\\n'+types.map((x,i)=>(i+1)+'. *'+x.toUpperCase()+'*'+(l==='en'?'':l==='rw'?' — '+rw[x]:' — '+rw[x])).join('\\n')+'\\n\\nReply: *.life choose <type>*\\nExample: .life choose study\\nSpecial day: *.life templates*';
+ return header(t.morning+' ☀️',date)+'\n'+t.choose+'\n\n'+types.map((x,i)=>(i+1)+'. *'+x.toUpperCase()+'*'+(l==='en'?'':l==='rw'?' — '+rw[x]:' — '+rw[x])).join('\n')+'\n\nReply: *.life choose <type>*\nExample: .life choose study\nSpecial day: *.life templates*';
 }
 async function sendLifeSticker(sock,kind='morning'){
  const jid=self(sock);if(!jid)throw new Error('WhatsApp self chat unavailable');
@@ -201,12 +201,12 @@ async function tick(sock = socket) {
         if(settings.dailyCheckin&&!sent[checkinKey]&&local.time>=settings.dailyCheckinTime){
             const dueAt=localDateTimeToEpoch(local.date,settings.dailyCheckinTime,settings.timezone);
             if(now-dueAt>90*60000) life.markNotificationMissed(checkinKey);
-            else await deliver(sock,checkinKey,dayPrompt(local.date)+'\\n\\n'+dailyPsalm(local.date),{kind:'reminder',title:'MUSHII daily check-in'});
+            else await deliver(sock,checkinKey,dayPrompt(local.date)+'\n\n'+dailyPsalm(local.date),{kind:'reminder',title:'MUSHII daily check-in'});
         }
         if (settings.dailyAgenda && !sent[agendaKey] && local.time >= settings.dailyAgendaTime) {
             const dueAt = localDateTimeToEpoch(local.date, settings.dailyAgendaTime, settings.timezone);
             if (now - dueAt > 90 * 60000) life.markNotificationMissed(agendaKey);
-            else if(!settings.dailyCheckin||life.getDailyCheckin(local.date)) await deliver(sock, agendaKey, agenda(local.date) + '\\n\\n🌅 *Start with your next action.*', {kind:'agenda',title:'Your daily agenda is ready'});
+            else if(!settings.dailyCheckin||life.getDailyCheckin(local.date)) await deliver(sock, agendaKey, agenda(local.date) + '\n\n🌅 *Start with your next action.*', {kind:'agenda',title:'Your daily agenda is ready'});
             else await deliver(sock,agendaKey,dayPrompt(local.date),{kind:'agenda',title:'Choose your day'});
         }
         const due = life.getDueNotifications(now);
@@ -295,15 +295,15 @@ async function runLife(sock,msg,args,ctx) {
             if(!allowed.includes(type))return reply(dayPrompt(today));
             life.recordDailyCheckin(today,type,p.join(' '));
             const agendaKey='morning-agenda:'+today;
-            const result=await reply(header('YOUR DAY IS SET · UMUNSI URATEGUYE',today)+'\\n'+agenda(today)+'\\n\\n'+dailyPsalm(today));
+            const result=await reply(header('YOUR DAY IS SET · UMUNSI URATEGUYE',today)+'\n'+agenda(today)+'\n\n'+dailyPsalm(today));
             life.markNotificationSent(agendaKey);
             return result;
         }
-        if(sec==='templates')return reply(header('SPECIAL DAY TEMPLATES')+'\\nexam · assignment · meeting · birthday · travel · project · reset · worship · review · achievement\\n\\n.life template exam [YYYY-MM-DD]');
+        if(sec==='templates')return reply(header('SPECIAL DAY TEMPLATES')+'\nexam · assignment · meeting · birthday · travel · project · reset · worship · review · achievement\n\n.life template exam [YYYY-MM-DD]');
         if(sec==='template'){
             const date=validateDate(p[p.length-1])?p.pop():today;
             const item=life.applySpecialTemplate(date,act);
-            return reply('✨ *'+act.toUpperCase()+' TEMPLATE APPLIED*\\n'+date+'\\n\\n'+agenda(date)+'\\n'+say('Adjust times to your real commitments.','Hindura amasaha ajyane n’inshingano zawe nyazo.'));
+            return reply('✨ *'+act.toUpperCase()+' TEMPLATE APPLIED*\n'+date+'\n\n'+agenda(date)+'\n'+say('Adjust times to your real commitments.','Hindura amasaha ajyane n’inshingano zawe nyazo.'));
         }
         if(sec==='psalm')return reply(dailyPsalm(today));
         if(sec==='language'){
@@ -316,7 +316,7 @@ async function runLife(sock,msg,args,ctx) {
             const x=life.setDailyCheckin(act==='on',p[0]||life.getSettings().dailyCheckinTime);return reply('Daily check-in '+(x.enabled?'ON':'OFF')+' at '+x.time);
         }
         if(sec==='pillars'){
-            return reply(header('LIFE PILLARS · INKINGI Z’UBUZIMA')+'\\n'+life.listPillars().map(x=>'🌿 *'+x.id+'* · '+x.name+' — '+x.progress+'%').join('\\n')+'\\n\\n.life pillar <id> <0-100> [note]');
+            return reply(header('LIFE PILLARS · INKINGI Z’UBUZIMA')+'\n'+life.listPillars().map(x=>'🌿 *'+x.id+'* · '+x.name+' — '+x.progress+'%').join('\n')+'\n\n.life pillar <id> <0-100> [note]');
         }
         if(sec==='pillar'){
             const progress=Number(act),id=(p.shift()||'').toLowerCase();
@@ -326,10 +326,10 @@ async function runLife(sock,msg,args,ctx) {
         if(sec==='prevention'){
             if(act==='add'){
                 const f=p.join(' ').split('|').map(x=>x.trim());if(f.length<2)return reply('Use .life prevention add <trigger> | <response> [| pillar-id].');
-                const x=life.addPreventionPlan(f[0],f[1],f[2]||'');return reply('🛡️ Plan *'+x.id+'* saved.\\nTrigger: '+x.trigger+'\\nResponse: '+x.response);
+                const x=life.addPreventionPlan(f[0],f[1],f[2]||'');return reply('🛡️ Plan *'+x.id+'* saved.\nTrigger: '+x.trigger+'\nResponse: '+x.response);
             }
             if(act==='delete')return reply(life.deletePreventionPlan(p[0])?'Plan deleted.':'Plan not found.');
-            const a=life.listPreventionPlans();return reply(a.length?'🛡️ *PREVENTION PLANS*\\n'+a.map(x=>'*'+x.id+'* · '+(x.pillarId||'general')+'\\nIF: '+x.trigger+'\\nTHEN: '+x.response).join('\\n\\n'):'No plans yet.');
+            const a=life.listPreventionPlans();return reply(a.length?'🛡️ *PREVENTION PLANS*\n'+a.map(x=>'*'+x.id+'* · '+(x.pillarId||'general')+'\nIF: '+x.trigger+'\nTHEN: '+x.response).join('\n\n'):'No plans yet.');
         }
         if(sec==='doctor') {
             const fs = require('node:fs');
@@ -349,7 +349,7 @@ async function runLife(sock,msg,args,ctx) {
                 'AI Life Coach: ' + (settings.aiCoach ? 'enabled' : 'disabled'),
                 'Reminder scheduler: ' + (timer ? 'running' : 'stopped'),
             ];
-            return reply('LIFE OS DIAGNOSTICS\\n' + checks.join('\\n'));
+            return reply('LIFE OS DIAGNOSTICS\n' + checks.join('\n'));
         }
         if(sec==='status') {
             const s=life.getSettings(), classes=Object.entries(life._getState().weeklyClassTypes).map(([d,t])=>d+':'+t).join(', ')||'not set';
@@ -502,7 +502,7 @@ async function runLife(sock,msg,args,ctx) {
                 '\nRecipient configured: '+(Boolean(process.env.LIFE_OS_EMAIL_TO)?'yes':'no')+
                 '\nGoogle connected: '+(google.getStatus().connected?'yes':'no'));
             if(act==='test') {
-                await google.sendEmail({to:process.env.LIFE_OS_EMAIL_TO,subject:'MUSHII Life OS | Email connection test',text:'Hello,\\n\\nYour MUSHII Life OS email connection is working.\\n\\nKind regards,\\nMUSHII Life OS'});
+                await google.sendEmail({to:process.env.LIFE_OS_EMAIL_TO,subject:'MUSHII Life OS | Email connection test',text:'Hello,\n\nYour MUSHII Life OS email connection is working.\n\nKind regards,\nMUSHII Life OS'});
                 return reply('Test email sent. Check the configured inbox.');
             }
             if(act==='daily'||act==='agenda') {
@@ -536,7 +536,7 @@ async function runLife(sock,msg,args,ctx) {
                     '',
                     'Kind regards,',
                     'MUSHII Life OS'
-                ].join('\\n');
+                ].join('\n');
                 await google.sendEmail({to:process.env.LIFE_OS_EMAIL_TO,subject:'MUSHII Life OS | Daily plan · '+today,text:body});
                 return reply('📧 Professional daily briefing sent to your configured inbox.');
             }
