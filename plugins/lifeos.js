@@ -379,7 +379,7 @@ function help() {
         '.life google connect|status|disconnect · .life upload data · .life backups',
         '.life restore <Drive-file-id> yes · .life export data',
         '.life email test|daily|status · .life coach on|off|<question> · .life doctor',
-        '.life focus on|off · .life settings purpose on|off · purposetimes HH:MM HH:MM HH:MM · .life status',
+        '.focus on|off · .life settings purpose on|off · purposetimes HH:MM HH:MM HH:MM · .life status',
         '_Owner-only and private-chat-only._'
     ].join('\n');
 }
