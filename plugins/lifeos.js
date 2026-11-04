@@ -18,6 +18,41 @@ async function send(sock, text) {
     if (!jid) throw new Error('WhatsApp self chat unavailable');
     return sock.sendMessage(jid, { text: String(text).slice(0, 3500) });
 }
+const LANG = {
+ bilingual:{morning:'Good morning · Mwaramutse',choose:'What kind of day are you planning? / Ni uwuhe munsi uteganya kugira?',psalm:'DAILY PSALM · IJAMBO RY’UMUNSI'},
+ en:{morning:'Good morning',choose:'What kind of day are you planning?',psalm:'DAILY PSALM'},
+ rw:{morning:'Mwaramutse',choose:'Ni uwuhe munsi uteganya kugira?',psalm:'IJAMBO RY’UMUNSI'}
+};
+const PSALMS=[
+ ['Psalm 23:1','You do not carry the whole day alone. Take one faithful step at a time.','Ntugomba kwikorera umunsi wose wenyine. Tera intambwe imwe y’indahemuka icyarimwe.'],
+ ['Psalm 27:1','Let courage be louder than fear. Choose the next right action.','Ubutwari burushe ubwoba. Hitamo igikorwa cyiza gikurikiraho.'],
+ ['Psalm 46:10','Make room for stillness before the noise of the day.','Fata akanya ko gutuza mbere y’urusaku rw’umunsi.'],
+ ['Psalm 90:17','Give your work care and purpose; small faithful efforts matter.','Kora witonze kandi ufite intego; imbaraga nto z’indahemuka zifite agaciro.'],
+ ['Psalm 121:1–2','When the path feels uncertain, pause, seek help and take the next step.','Iyo inzira itagaragara neza, humura, saba ubufasha maze ukomeze.'],
+ ['Psalm 34:8','Notice one good thing today and let gratitude shape your response.','Reba ikintu kimwe cyiza uyu munsi, maze gushimira bikuyobore.'],
+ ['Psalm 37:5','Commit your plans, then do your part with patience and integrity.','Shyira imigambi yawe mu maboko y’Imana, ukore uruhare rwawe wihanganye.']
+];
+function lang(){return life.getSettings().language||'bilingual';}
+function say(en,rw){return lang()==='en'?en:lang()==='rw'?rw:en+'\\n'+rw;}
+function header(title,sub=''){return '🌱 *MUSHII LIFE OS*\\n━━━━━━━━━━━━━━━━━━━━\\n*'+title+'*'+(sub?'\\n'+sub:'')+'\\n━━━━━━━━━━━━━━━━━━━━';}
+function dailyPsalm(date=life.getDateKey()){
+ const p=PSALMS[Number(date.replace(/-/g,''))%PSALMS.length],l=lang();
+ return header((LANG[l]||LANG.bilingual).psalm,'📖 '+p[0])+'\\n'+(l==='en'?p[1]:l==='rw'?p[2]:p[1]+'\\n'+p[2]);
+}
+function dayPrompt(date){
+ const l=lang(),t=LANG[l]||LANG.bilingual;
+ const types=['focus','study','work','home','travel','spiritual','rest','free','sunday'];
+ const rw={focus:'Kwibanda',study:'Kwiga',work:'Akazi',home:'Murugo',travel:'Urugendo',spiritual:'Iby’umwuka',rest:'Kuruhuka',free:'Bisanzwe',sunday:'Ku cyumweru'};
+ return header(t.morning+' ☀️',date)+'\\n'+t.choose+'\\n\\n'+types.map((x,i)=>(i+1)+'. *'+x.toUpperCase()+'*'+(l==='en'?'':l==='rw'?' — '+rw[x]:' — '+rw[x])).join('\\n')+'\\n\\nReply: *.life choose <type>*\\nExample: .life choose study\\nSpecial day: *.life templates*';
+}
+async function sendLifeSticker(sock,kind='morning'){
+ const jid=self(sock);if(!jid)throw new Error('WhatsApp self chat unavailable');
+ const labels={morning:['NEW DAY','GROW WITH PURPOSE'],goal:['GOAL ACHIEVED','ONE STEP AT A TIME'],discipline:['STAY THE COURSE','CHOOSE WHAT HELPS YOU'],evening:['REFLECT & RESET','REST WITH GRATITUDE']};
+ const [title,sub]=labels[kind]||labels.morning;
+ const svg='<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect x="18" y="18" width="476" height="476" rx="96" fill="#102a2a" stroke="#d6b56d" stroke-width="12"/><circle cx="256" cy="170" r="78" fill="#d6b56d"/><path d="M256 105L272 153L323 155L283 186L297 237L256 207L215 237L229 186L189 155L240 153Z" fill="#102a2a"/><text x="256" y="325" text-anchor="middle" font-family="Arial" font-size="34" font-weight="bold" fill="white">'+title+'</text><text x="256" y="374" text-anchor="middle" font-family="Arial" font-size="19" fill="#d6b56d">'+sub+'</text></svg>';
+ try{const sharp=require('sharp');const webp=await sharp(Buffer.from(svg)).resize(512,512).webp().toBuffer();return sock.sendMessage(jid,{sticker:webp});}
+ catch(e){return sock.sendMessage(jid,{text:'🌱 *'+title+'* — '+sub});}
+}
 function android(title, text, notificationId) {
     return new Promise((resolve, reject) => execFile('termux-notification', [
         '--title', String(title || 'MUSHII Life OS').slice(0, 80),
@@ -162,12 +197,17 @@ async function tick(sock = socket) {
         const now = Date.now(), settings = life.getSettings(), local = localParts(now, settings.timezone);
         const sent = life._getState().sentEvents;
         const agendaKey = 'morning-agenda:' + local.date;
+        const checkinKey='daily-checkin:'+local.date;
+        if(settings.dailyCheckin&&!sent[checkinKey]&&local.time>=settings.dailyCheckinTime){
+            const dueAt=localDateTimeToEpoch(local.date,settings.dailyCheckinTime,settings.timezone);
+            if(now-dueAt>90*60000) life.markNotificationMissed(checkinKey);
+            else await deliver(sock,checkinKey,dayPrompt(local.date)+'\\n\\n'+dailyPsalm(local.date),{kind:'reminder',title:'MUSHII daily check-in'});
+        }
         if (settings.dailyAgenda && !sent[agendaKey] && local.time >= settings.dailyAgendaTime) {
             const dueAt = localDateTimeToEpoch(local.date, settings.dailyAgendaTime, settings.timezone);
             if (now - dueAt > 90 * 60000) life.markNotificationMissed(agendaKey);
-            else await deliver(sock, agendaKey, agenda(local.date) + '\n\n🌅 *Start with your next action.*', {
-                kind: 'agenda', title: 'Your daily agenda is ready',
-            });
+            else if(!settings.dailyCheckin||life.getDailyCheckin(local.date)) await deliver(sock, agendaKey, agenda(local.date) + '\\n\\n🌅 *Start with your next action.*', {kind:'agenda',title:'Your daily agenda is ready'});
+            else await deliver(sock,agendaKey,dayPrompt(local.date),{kind:'agenda',title:'Choose your day'});
         }
         const due = life.getDueNotifications(now);
         due.stale.forEach(key => life.markNotificationMissed(key));
@@ -219,7 +259,12 @@ function help() {
     return [
         '🌱 *MUSHII LIFE OS*',
         '.life agenda [tomorrow|YYYY-MM-DD]',
-        '.life day <morning|evening|free|travel|home|sunday> [date]',
+        '.life day <morning|evening|free|travel|home|sunday|focus|study|work|spiritual|rest> [date]',
+        '.life choose <type> · .life templates · .life template <name> [date]',
+        '.life pillars · .life pillar <id> <0-100> [note]',
+        '.life prevention add <trigger> | <response> [| pillar-id] · list · delete <id>',
+        '.life psalm · .life language bilingual|en|rw · .life sticker [morning|goal|discipline|evening]',
+        '.life checkin on|off [HH:MM]',
         '.life class <mon|tue|...> <morning|evening|off>',
         '.life agenda add|edit|move|remove ...',
         '.next [done|skip|delay <minutes>]',
@@ -245,6 +290,47 @@ async function runLife(sock,msg,args,ctx) {
     const today=life.getDateKey(), reply=x=>ctx.reply(String(x));
     try {
         if(sec==='help'||sec==='menu') return reply(help());
+        if(sec==='choose'){
+            const type=act,allowed=['focus','study','work','home','travel','spiritual','rest','free','sunday'];
+            if(!allowed.includes(type))return reply(dayPrompt(today));
+            life.recordDailyCheckin(today,type,p.join(' '));
+            const agendaKey='morning-agenda:'+today;
+            const result=await reply(header('YOUR DAY IS SET · UMUNSI URATEGUYE',today)+'\\n'+agenda(today)+'\\n\\n'+dailyPsalm(today));
+            life.markNotificationSent(agendaKey);
+            return result;
+        }
+        if(sec==='templates')return reply(header('SPECIAL DAY TEMPLATES')+'\\nexam · assignment · meeting · birthday · travel · project · reset · worship · review · achievement\\n\\n.life template exam [YYYY-MM-DD]');
+        if(sec==='template'){
+            const date=validateDate(p[p.length-1])?p.pop():today;
+            const item=life.applySpecialTemplate(date,act);
+            return reply('✨ *'+act.toUpperCase()+' TEMPLATE APPLIED*\\n'+date+'\\n\\n'+agenda(date)+'\\n'+say('Adjust times to your real commitments.','Hindura amasaha ajyane n’inshingano zawe nyazo.'));
+        }
+        if(sec==='psalm')return reply(dailyPsalm(today));
+        if(sec==='language'){
+            if(!['bilingual','en','rw'].includes(act))return reply('Use .life language bilingual|en|rw.');
+            life.setLanguage(act);return reply('🌐 Language preference saved: *'+act+'*.');
+        }
+        if(sec==='sticker'){await sendLifeSticker(sock,['morning','goal','discipline','evening'].includes(act)?act:'morning');return reply(say('Sticker sent.','Sticker yoherejwe.'));}
+        if(sec==='checkin'){
+            if(!['on','off'].includes(act))return reply('Daily check-in: '+(life.getSettings().dailyCheckin?'ON':'OFF')+' at '+life.getSettings().dailyCheckinTime);
+            const x=life.setDailyCheckin(act==='on',p[0]||life.getSettings().dailyCheckinTime);return reply('Daily check-in '+(x.enabled?'ON':'OFF')+' at '+x.time);
+        }
+        if(sec==='pillars'){
+            return reply(header('LIFE PILLARS · INKINGI Z’UBUZIMA')+'\\n'+life.listPillars().map(x=>'🌿 *'+x.id+'* · '+x.name+' — '+x.progress+'%').join('\\n')+'\\n\\n.life pillar <id> <0-100> [note]');
+        }
+        if(sec==='pillar'){
+            const progress=Number(act),id=(p.shift()||'').toLowerCase();
+            if(!Number.isInteger(progress)||progress<0||progress>100)return reply('Use .life pillar <id> <0-100> [note].');
+            const x=life.updatePillar(id,{progress,note:p.join(' ')});return reply(x?'🌿 *'+x.name+'* progress: '+x.progress+'%.':'Pillar not found. Use .life pillars.');
+        }
+        if(sec==='prevention'){
+            if(act==='add'){
+                const f=p.join(' ').split('|').map(x=>x.trim());if(f.length<2)return reply('Use .life prevention add <trigger> | <response> [| pillar-id].');
+                const x=life.addPreventionPlan(f[0],f[1],f[2]||'');return reply('🛡️ Plan *'+x.id+'* saved.\\nTrigger: '+x.trigger+'\\nResponse: '+x.response);
+            }
+            if(act==='delete')return reply(life.deletePreventionPlan(p[0])?'Plan deleted.':'Plan not found.');
+            const a=life.listPreventionPlans();return reply(a.length?'🛡️ *PREVENTION PLANS*\\n'+a.map(x=>'*'+x.id+'* · '+(x.pillarId||'general')+'\\nIF: '+x.trigger+'\\nTHEN: '+x.response).join('\\n\\n'):'No plans yet.');
+        }
         if(sec==='doctor') {
             const fs = require('node:fs');
             const path = require('node:path');
