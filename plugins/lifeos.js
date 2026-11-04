@@ -489,7 +489,8 @@ async function runLife(sock,msg,args,ctx) {
         if(sec==='status') {
             const s=life.getSettings(), classes=Object.entries(life._getState().weeklyClassTypes).map(([d,t])=>d+':'+t).join(', ')||'not set';
             return reply('🌱 *LIFE OS STATUS*\nTimezone: '+s.timezone+'\nDay: '+life.getDayType(today)+'\nClasses: '+classes+
-                '\nAdvance reminder: '+s.advanceMinutes+' min\nDaily agenda: '+(s.dailyAgenda?'ON':'OFF')+' at '+s.dailyAgendaTime+
+                '\nAdvance reminder: '+s.advanceMinutes+' min\nMorning check-in: '+(s.dailyCheckin?'ON':'OFF')+' at '+s.dailyCheckinTime+
+                '\nDaily agenda: '+(s.dailyAgenda?'ON':'OFF')+' at '+s.dailyAgendaTime+'\nSleep target: 23:00 · before midnight'+
                 '\nWhatsApp: '+(s.whatsappNotifications?'ON':'OFF')+'\nAndroid pop-up: '+(s.androidNotifications?'ON':'OFF')+
                 '\nEmail: '+(s.emailNotifications?'ON':'OFF')+'\nAuto Drive backup: '+(s.autoBackup?'ON':'OFF')+' at '+s.autoBackupTime+
                 '\nAI Life Coach: '+(s.aiCoach?'ON':'OFF')+'\nFocus: '+(s.focusMode?'ON':'OFF')+
