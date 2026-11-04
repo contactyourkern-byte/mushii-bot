@@ -574,6 +574,7 @@ async function runLife(sock,msg,args,ctx) {
             return status?reply(life.updateGoal(p[0],{status})?'✅ Goal status: '+status:'Goal not found.'):reply('Use .life goal add|done|pause|resume|edit|delete ....');
         }
         if(sec==='book'||sec==='books') {
+            if(act==='help') return reply('📚 *MUSHII BOOK · PERSONAL KNOWLEDGE LIBRARY*\n.life book create <title> | <description>\n.life book list\n.life book add <book-id> | <sub-book> | <title> | <content>\n.life book entries <book-id> [search]\n.life book sections <book-id>\n.life book show <book-id> <entry-id>\n.life book edit <book-id> | <entry-id> | <sub-book> | <title> | <content>\n.life book delete-entry <book-id> <entry-id>\n.life book delete <book-id>\n\nEach sub-book is a section name, for example Software Engineering, Business Ideas, Personal Growth or Bible Notes. Entries are stored in your private Life OS data. Use .life upload data to encrypt and upload the whole library to Google Drive.');
             if(act==='create') {
                 const fields=p.join(' ').split('|').map(x=>x.trim());
                 const book=life.createBook(fields[0],fields.slice(1).join(' | '));
