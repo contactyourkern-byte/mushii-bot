@@ -333,7 +333,7 @@ async function runLife(sock,msg,args,ctx) {
             return reply(header('LIFE PILLARS · INKINGI Z’UBUZIMA')+'\n'+life.listPillars().map(x=>'🌿 *'+x.id+'* · '+x.name+' — '+x.progress+'%').join('\n')+'\n\n.life pillar <id> <0-100> [note]');
         }
         if(sec==='pillar'){
-            const progress=Number(act),id=(p.shift()||'').toLowerCase();
+            const id=act,progress=Number(p.shift());
             if(!Number.isInteger(progress)||progress<0||progress>100)return reply('Use .life pillar <id> <0-100> [note].');
             const x=life.updatePillar(id,{progress,note:p.join(' ')});return reply(x?'🌿 *'+x.name+'* progress: '+x.progress+'%.':'Pillar not found. Use .life pillars.');
         }
