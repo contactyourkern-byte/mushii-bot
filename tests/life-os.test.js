@@ -329,3 +329,21 @@ test('skipped agenda tasks retain the reason in the daily timeline', async t => 
     assert.equal(life.markAgendaItem('2026-11-03', 'university', 'skipped', 'Unexpected university closure'), true);
     assert.equal(life.getAgenda('2026-11-03').find(item => item.id === 'university').note, 'Unexpected university closure');
 });
+
+test('MUSHII Book supports private books, sub-books, editing, searching and deletion across restarts', async t => {
+    const filePath = await makePath(t);
+    const life = createLifeOS({ filePath });
+    const book = life.createBook('My Knowledge Book', 'Personal learning library');
+    const first = life.addBookEntry(book.id, 'Software Engineering', 'Node.js notes', 'Promises, async/await and event loops.');
+    const second = life.addBookEntry(book.id, 'Business Ideas', 'Faceless channel', 'Research an audience and publish consistently.');
+    assert.equal(life.listBooks()[0].entryCount, 2);
+    assert.equal(life.listBookEntries(book.id, 'promises').entries[0].id, first.id);
+    assert.deepEqual([...new Set(life.listBookEntries(book.id).entries.map(x => x.section))].sort(), ['Business Ideas', 'Software Engineering']);
+    assert.equal(life.updateBookEntry(book.id, first.id, { title: 'Node.js study notes' }), true);
+    assert.equal(life.listBookEntries(book.id).entries.find(x => x.id === first.id).title, 'Node.js study notes');
+    const restarted = createLifeOS({ filePath });
+    assert.equal(restarted.listBookEntries(book.id).entries.length, 2);
+    assert.equal(restarted.deleteBookEntry(book.id, second.id), true);
+    assert.equal(restarted.deleteBook(book.id), true);
+    assert.equal(restarted.listBooks().length, 0);
+});
