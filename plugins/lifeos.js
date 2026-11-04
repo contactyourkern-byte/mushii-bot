@@ -301,7 +301,7 @@ function agenda(date) {
     const label=type==='class-morning'?'CLASS DAY · MORNING':type==='class-afternoon'?'CLASS DAY · AFTERNOON':type==='free-day'?'FREE DAY · NO CLASS':type==='special'?'SPECIAL DAY · MANUAL PLAN':type.toUpperCase();
     const items=life.getAgenda(date);
     return header('DAILY TIMELINE · '+label,day)+'\n\n'+items.map(x=>
-        (x.status==='done'?'✅':x.status==='skipped'?'↪️':'▫️')+' *'+x.time+'* — '+x.title+(x.note?'\n   _Note: '+x.note+'_':'')
+        (x.status==='done'?'✅':x.status==='skipped'?'↪️':'▫️')+' *'+x.time+'* — '+x.title+(x.note?'\n   _Note: '+x.note+'_':'')+' _['+x.id+']_'
     ).join('\n')+'\n\n'+say('Use .next to focus on the current priority. After you mark it done, I will show you the next step.','Koresha .next wibande ku gikorwa cy’ingenzi. Nukimara kukirangiza, ndakwereka intambwe ikurikiraho.');
 }
 function whyThisMatters(item){
