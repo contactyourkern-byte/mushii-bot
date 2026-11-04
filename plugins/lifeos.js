@@ -64,9 +64,18 @@ function dailyPsalm(date=life.getDateKey()){
 }
 function dayPrompt(date){
  const l=lang(),t=LANG[l]||LANG.bilingual;
- const types=['focus','study','work','home','travel','spiritual','rest','free','sunday'];
- const rw={focus:'Kwibanda',study:'Kwiga',work:'Akazi',home:'Murugo',travel:'Urugendo',spiritual:'Iby’umwuka',rest:'Kuruhuka',free:'Bisanzwe',sunday:'Ku cyumweru'};
- return header(t.morning+' ☀️',date)+'\n'+t.choose+'\n\n'+types.map((x,i)=>(i+1)+'. *'+x.toUpperCase()+'*'+(l==='en'?'':l==='rw'?' — '+rw[x]:' — '+rw[x])).join('\n')+'\n\nReply: *.life choose <type>*\nExample: .life choose study\nSpecial day: *.life templates*'+growthBrief();
+ const options=[
+  ['class-morning','CLASS DAY · MORNING','Umunsi w’amasomo · mu gitondo'],
+  ['class-afternoon','CLASS DAY · AFTERNOON','Umunsi w’amasomo · nyuma ya saa sita'],
+  ['free-day','FREE DAY · NO CLASS','Umunsi w’ubwisanzure · nta masomo'],
+  ['special','SPECIAL DAY · MANUAL AGENDA','Umunsi udasanzwe · gahunda uyishyiramo']
+ ];
+ const intro=say('Your day begins at 06:00: prayer, sport and preparation. Choose the day type so I can guide your next action.','Umunsi wawe utangira saa 06:00: gusenga, gukora sport no kwitegura. Hitamo ubwoko bw’umunsi kugira ngo nkuyobore ku gikorwa gikurikiraho.');
+ const choices=options.map((x,i)=>(i+1)+'. *'+x[0]+'*'+(l==='en'?'':l==='rw'?' — '+x[2]:' — '+x[1]+' / '+x[2])).join('\n');
+ return header(t.morning+' ☀️',date)+'\n'+intro+'\n\n'+choices+
+  '\n\nChoose: .life choose class-morning | class-afternoon | free-day | special'+
+  '\nSpecial-day tasks: .life special add HH:MM duration task'+
+  '\n\n'+say('Your purpose stays the same; only today’s schedule changes.','Intego zawe zirahoraho; gahunda y’uyu munsi ni yo ihinduka.')+growthBrief();
 }
 function growthBrief(){
  const goals=life.listGoals().filter(x=>x.status==='active').slice(0,5);
