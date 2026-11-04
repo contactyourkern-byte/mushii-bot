@@ -278,7 +278,8 @@ function nextText(x) {
  if(!x)return header('NEXT ACTION · RESET','✅')+'\n'+say('Your planned tasks are complete. Review the day, care for yourself and protect your sleep.','Ibikorwa wari wateganyije birarangiye. Suzuma umunsi, wiyiteho kandi urinde ibitotsi byawe.');
  const phase=x.phase==='current'?'NOW · URIMO':x.phase==='overdue'?'OVERDUE · HITAMO':'UP NEXT · IGIKURIKIRA';
  const status=x.phase==='overdue'?say('This task is overdue. Complete it, skip it with a reason, or reschedule it honestly.','Igihe cy’iki gikorwa cyarenze. Kirangize, gisimbuke utange impamvu, cyangwa ugishyire ku yindi saha.'):say('Give this task your attention. Avoid switching to non-urgent chats until the block is complete.','Iki gikorwa gihe umwanya wawe. Irinde kugana ibiganiro bitihutirwa kugeza iki gikorwa kirangiye.');
- return header('NEXT ACTION · '+phase,x.date)+'\n\n⏰ *'+x.time+' — '+x.title+'*\n\n'+status+'\n\n💡 *WHY IT MATTERS*\n'+whyThisMatters(x)+'\n\n.next done\n.next skip [reason]\n.next delay 10\n.next reschedule 14:30';
+ const focus=life.getSettings().focusMode?say('FOCUS MODE IS ON. Keep WhatsApp closed outside the scheduled chat windows. Non-urgent messages can wait; respond to genuine emergencies.','FOCUS MODE irafunguye. Funga WhatsApp igihe kitari icyo kuganira wateganyije. Ubutumwa butihutirwa bushobora gutegereza; ibibazo byihutirwa byo ubyitondere.'):'';
+ return header('NEXT ACTION · '+phase,x.date)+'\n\n⏰ *'+x.time+' — '+x.title+'*\n\n'+status+'\n'+(focus?'\n'+focus:'')+'\n\n💡 *WHY IT MATTERS*\n'+whyThisMatters(x)+'\n\n.next done\n.next skip [reason]\n.next delay 10\n.next reschedule 14:30';
 }
 async function tick(sock = socket) {
     if (busy) return;
@@ -310,9 +311,13 @@ async function tick(sock = socket) {
                 : event.kind === 'agenda-start' ? '🎯 *START NOW · TANGIRA NONAHA*'
                 : event.kind === 'agenda' ? '🎯 *NEXT ACTION*' : '🔔 *PERSONAL REMINDER*';
             const details = event.category === 'private' ? 'Private check-in · 27 / 190' : event.title;
-            const instruction = event.kind === 'agenda-advance'
-                ? say('This task begins in '+event.leadMinutes+' minutes. Finish what you are doing and get ready.','Iki gikorwa kiratangira mu minota '+event.leadMinutes+'. Soza ibyo urimo kandi witegure.')
-                : say('It is time to begin. Focus on this task before moving to another.','Igihe cyo gutangira kirageze. Banza wibande kuri iki gikorwa mbere yo kujya ku kindi.');
+            const instruction = event.category === 'communication'
+                ? (event.kind === 'agenda-advance'
+                    ? say('Your planned public-chat window opens in '+event.leadMinutes+' minutes. Finish your task, then check messages during the window.','Igihe wateganyije cyo kuganira rusange kiratangira mu minota '+event.leadMinutes+'. Soza umurimo urimo, ubutumwa uzabusubize muri icyo gihe.')
+                    : say('Your planned public-chat window is open. Reply respectfully, keep it purposeful and leave when the window ends.','Igihe wateganyije cyo kuganira kirageze. Subiza wubaha abandi, ugumane intego, kandi ugire igihe cyo kuhava kirangiye.'))
+                : (event.kind === 'agenda-advance'
+                    ? say('This task begins in '+event.leadMinutes+' minutes. Finish what you are doing and get ready.','Iki gikorwa kiratangira mu minota '+event.leadMinutes+'. Soza ibyo urimo kandi witegure.')
+                    : say('It is time to begin. Focus on this task before moving to another.','Igihe cyo gutangira kirageze. Banza wibande kuri iki gikorwa mbere yo kujya ku kindi.'));
             await deliver(sock, event.key,
                 label + '\n\n⏰ *' + event.time + ' — ' + details + '*\n\n' + instruction + '\n\n.next', event);
         }
