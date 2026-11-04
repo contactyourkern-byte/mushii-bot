@@ -40,6 +40,33 @@ test('default timezone and morning agenda reminder are configured for Kigali', a
     assert.equal(settings.advanceMinutes, 10);
 });
 
+test('legacy default reminder times migrate to the 06:00 routine without changing custom times', async t => {
+    const filePath = await makePath(t);
+    await fs.writeFile(filePath, JSON.stringify({
+        version: 2,
+        timezone: 'Africa/Kigali',
+        settings: {
+            dailyAgenda: true,
+            dailyAgendaTime: '05:55',
+            dailyCheckin: true,
+            dailyCheckinTime: '05:45',
+            purposeReminders: true,
+        },
+    }));
+    const migrated = createLifeOS({ filePath });
+    assert.equal(migrated.getSettings().dailyAgendaTime, '06:05');
+    assert.equal(migrated.getSettings().dailyCheckinTime, '06:00');
+    const customPath = await makePath(t);
+    await fs.writeFile(customPath, JSON.stringify({
+        version: 2,
+        timezone: 'Africa/Kigali',
+        settings: { dailyAgendaTime: '06:20', dailyCheckinTime: '06:10' },
+    }));
+    const custom = createLifeOS({ filePath: customPath });
+    assert.equal(custom.getSettings().dailyAgendaTime, '06:20');
+    assert.equal(custom.getSettings().dailyCheckinTime, '06:10');
+});
+
 test('weekly class patterns choose morning and evening templates, with date overrides', async t => {
     const life = createLifeOS({ filePath: await makePath(t) });
     life.setWeeklyClassType('tue', 'morning');
