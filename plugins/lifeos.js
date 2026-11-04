@@ -49,13 +49,13 @@ function growthBrief(){
  const goals=life.listGoals().filter(x=>x.status==='active').slice(0,5);
  const pillars=life.listPillars().filter(x=>x.status==='active');
  const plans=life.listPreventionPlans().filter(x=>x.active).slice(0,3);
- const out=['\\n🌿 *LIFE PILLARS · INKINGI Z’UBUZIMA*',
+ const out=['\n🌿 *LIFE PILLARS · INKINGI Z’UBUZIMA*',
    ...pillars.map(x=>'• '+x.name+': '+x.progress+'%'),
-   '\\n🎯 *ACTIVE GOALS · INTEGO ZIKORA*',
+   '\n🎯 *ACTIVE GOALS · INTEGO ZIKORA*',
    ...(goals.length?goals.map(x=>'• '+x.title):[say('No active goals added yet.','Nta ntego ikora urashyiramo.')]),
-   '\\n🛡️ *PREVENTION · KWIYITAHO NO KWIHANGANA*',
+   '\n🛡️ *PREVENTION · KWIYITAHO NO KWIHANGANA*',
    ...(plans.length?plans.map(x=>'• If '+x.trigger+' → '+x.response):[say('Add a prevention plan for a situation that may derail your day.','Shyiraho gahunda yo kwirinda ikintu gishobora kukubuza kugera ku ntego.')])];
- return out.join('\\n');
+ return out.join('\n');
 }
 async function sendLifeSticker(sock,kind='morning'){
  const jid=self(sock);if(!jid)throw new Error('WhatsApp self chat unavailable');
