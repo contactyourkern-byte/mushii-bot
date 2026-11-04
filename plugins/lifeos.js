@@ -688,12 +688,22 @@ async function runLife(sock,msg,args,ctx) {
                 const x=life.setAutoBackup(v==='on',p[1]||life.getSettings().autoBackupTime);
                 return reply('Automatic encrypted Drive backup '+(x.enabled?'ON':'OFF')+' at '+x.time+'.');
             }
+            if(act==='purpose') {
+                if(!['on','off'].includes(v)) return reply('Use .life settings purpose on|off.');
+                const x=life.setPurposeReminders(v==='on');
+                return reply('🌱 Purpose reminders '+(x.enabled?'ON':'OFF')+' · '+Object.values(x.times).join(' / ')+'.');
+            }
+            if(act==='purposetimes') {
+                const times={morning:p[0],midday:p[1],evening:p[2]};
+                const x=life.setPurposeReminders(life.getSettings().purposeReminders,times);
+                return reply('✅ Purpose reminder times saved: '+x.times.morning+', '+x.times.midday+', '+x.times.evening+'.');
+            }
             if(act==='coach') {
                 if(!['on','off'].includes(v)) return reply('Use .life settings coach on|off.');
                 life.setAICoach(v==='on');
                 return reply('AI Life Coach '+v+'.');
             }
-            return reply('Settings: advance <min>, timezone <IANA>, dailyagenda on|off [HH:MM], android on|off, whatsapp on|off, email on|off, backup on|off [HH:MM], coach on|off.');
+            return reply('Settings: advance <min>, timezone <IANA>, dailyagenda on|off [HH:MM], android on|off, whatsapp on|off, email on|off, backup on|off [HH:MM], purpose on|off, purposetimes <HH:MM> <HH:MM> <HH:MM>, coach on|off.');
         }
         if(sec==='overview') return reply('🌱 *LIFE OS OVERVIEW*\nActive goals: '+life.listGoals().filter(x=>x.status==='active').length+
             '\nActive routines: '+life.listRoutines().filter(x=>x.active).length+
