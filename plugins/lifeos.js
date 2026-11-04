@@ -176,7 +176,7 @@ async function deliver(sock, key, text, event = {}) {
                 await google.sendEmail({
                     to,
                     subject: content.title,
-                    text: content.text + '\n\nOpen MUSHII Life OS in WhatsApp for details.',
+                    text: String(text).replace(/\*/g, '') + '\n\nOpen MUSHII Life OS in WhatsApp to review your agenda and mark the next action complete.',
                 });
             }
             life.markNotificationChannelSent(key, channel);
@@ -376,13 +376,24 @@ async function runLife(sock,msg,args,ctx) {
     try {
         if(sec==='help'||sec==='menu') return reply(help());
         if(sec==='choose'){
-            const type=act,allowed=['focus','study','work','home','travel','spiritual','rest','free','sunday'];
+            const type=act,allowed=['class-morning','class-afternoon','free-day','special','focus','study','work','home','travel','spiritual','rest','free','sunday'];
             if(!allowed.includes(type))return reply(dayPrompt(today));
             life.recordDailyCheckin(today,type,p.join(' '));
             const agendaKey='morning-agenda:'+today;
-            const result=await reply(header('YOUR DAY IS SET · UMUNSI URATEGUYE',today)+'\n'+agenda(today)+'\n\n'+dailyPsalm(today));
+            const specialHint=type==='special'?'\n\n'+say('Add your personal tasks with .life special add HH:MM duration task.','Ongeramo inshingano zawe ukoresheje .life special add HH:MM duration task.'):'';
+            const result=await reply(header('YOUR DAY IS SET · UMUNSI URATEGUYE',today)+'\n'+agenda(today)+specialHint+'\n\n'+dailyPsalm(today)+'\n\n'+nextText(life.getNextAction()));
             life.markNotificationSent(agendaKey);
             return result;
+        }
+        if(sec==='special'){
+            if(act==='add'){
+                const [time,duration,...title]=p;
+                const id=life.addDayAgendaItem(today,time,duration,title.join(' '));
+                return reply('✅ *SPECIAL DAY TASK SAVED · INSHINGANO YABITSWE*\n*'+time+'* — '+title.join(' ')+'\nID: '+id+'\n\n'+agenda(today));
+            }
+            if(act==='remove')return reply(life.removeDayAgendaItem(today,p[0])?'✅ Special-day task removed.':'Task not found.');
+            if(act==='list'||!act)return reply(agenda(today));
+            return reply('Use .life special add <HH:MM> <duration-minutes> <task> · list · remove <id>.');
         }
         if(sec==='templates')return reply(header('SPECIAL DAY TEMPLATES')+'\nexam · assignment · meeting · birthday · travel · project · reset · worship · review · achievement\n\n.life template exam [YYYY-MM-DD]');
         if(sec==='template'){
@@ -460,8 +471,9 @@ async function runLife(sock,msg,args,ctx) {
         }
         if(sec==='day') { const date=validateDate(p[0])?p.shift():today; life.setDayType(act,date,p.join(' ')); return reply('✅ '+date+' is now a *'+act+'* day.'); }
         if(sec==='class') {
-            if(act==='list') return reply('🎓 *WEEKLY CLASSES*\n'+(Object.entries(life._getState().weeklyClassTypes).map(([d,t])=>d+': '+t).join('\n')||'Not configured. Example: .life class mon morning.'));
-            life.setWeeklyClassType(act,p[0]); return reply('✅ Class pattern saved: '+act+' — '+p[0]);
+            if(act==='list') return reply('🎓 *WEEKLY CLASSES*\n'+(Object.entries(life._getState().weeklyClassTypes).map(([d,t])=>d+': '+(t==='evening'?'afternoon':t)).join('\n')||'Not configured. Example: .life class mon morning or .life class wed afternoon.'));
+            const result=life.setWeeklyClassType(act,p[0]);
+            return reply('✅ Class pattern saved: '+result.day+' — '+result.type+'.');
         }
         if(sec==='routine') {
             if(act==='add') { const [time,repeat,...title]=p, x=life.addRoutine(time,repeat,title.join(' ')); return reply('✅ Routine *'+x.id+'* saved: '+x.time+' · '+repeat+' · '+x.title); }
