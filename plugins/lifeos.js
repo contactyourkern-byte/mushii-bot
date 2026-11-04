@@ -93,13 +93,42 @@ function growthBrief(){
 function purposeReminderText(slot,date){
  const sets={
   morning:[
-   ['PURPOSE CHECK-IN · MORNING','27 · Protect your money: pause before spending and follow your plan.','190 · Protect your personal boundaries: practice self-control and choose what respects your values.','Keep building Software Engineering skills and move one measurable step toward at least one channel targeting $100,000 in revenue within three years.','Handle emotions with dignity. Be respectful; do not send impulsive messages.','KWIBUKA INTEGO · MU GITONDO','27 · Rinda amafaranga yawe: banza utekereze mbere yo kuyakoresha kandi ugire gahunda.','190 · Rinda amahame yawe bwite: komeza kwifata no guhitamo ibihuye n’indangagaciro zawe.','Komeza kwiga Software Engineering kandi ukore intambwe ifatika igana kuri channel nibura imwe ifite intego yo kwinjiza $100,000 mu myaka itatu.','Genza amarangamutima mu cyubahiro. Wubahe abandi kandi wirinde kohereza ubutumwa uhubutse.'],
+   '🌅 *PURPOSE CHECK-IN · MORNING*',
+   '*27 · Protect your money.* Pause before spending and follow your plan.',
+   '*190 · Protect your personal boundaries.* Practice self-control and choose actions that respect your values.',
+   'Keep building Software Engineering skills and move one measurable step toward at least one channel targeting $100,000 in revenue within three years.',
+   'Handle emotions with dignity. Be respectful; do not send impulsive messages.',
+   '🌅 *KWIBUKA INTEGO · MU GITONDO*',
+   '*27 · Rinda amafaranga yawe.* Banza utekereze mbere yo kuyakoresha kandi ugire gahunda.',
+   '*190 · Rinda amahame yawe bwite.* Komeza kwifata no guhitamo ibihuye n’indangagaciro zawe.',
+   'Komeza kwiga Software Engineering kandi ukore intambwe ifatika igana kuri channel nibura imwe ifite intego yo kwinjiza $100,000 mu myaka itatu.',
+   'Genza amarangamutima mu cyubahiro. Wubahe abandi kandi wirinde kohereza ubutumwa uhubutse.'
+  ],
   midday:[
-   ['MIDDAY RESET · STAY ON COURSE','Take a short break, drink water, then return to focused learning or content creation.','Use WhatsApp during planned chat windows. Non-urgent messages can wait; genuine emergencies deserve attention. Your three-year $100,000 channel ambition grows through one useful content step at a time.','Code 27 protects your resources. Code 190 protects your personal boundaries.','KWIYIBUTSA KU MANYWA · KOMEZA INZIRA','Fata akaruhuko gato, unywe amazi, wongere ukomeze kwiga cyangwa gukora content.','Koresha WhatsApp mu masaha yo kuganira wateganyije. Ubutumwa butihutirwa bushobora gutegereza; ikibazo cyihutirwa kiritabwaho. Intego ya $100,000 mu myaka itatu yubakwa n’intambwe nto za content ukora buri gihe.','Code 27 irinda umutungo wawe. Code 190 irinda amahame yawe bwite.'],
+   '☀️ *MIDDAY RESET · STAY ON COURSE*',
+   'Take a short break, drink water, then return to focused learning or content creation.',
+   'Use WhatsApp during planned chat windows. Non-urgent messages can wait; genuine emergencies deserve attention. Your three-year $100,000 channel ambition grows through one useful content step at a time.',
+   'Code 27 protects your resources. Code 190 protects your personal boundaries.',
+   '☀️ *KWIYIBUTSA KU MANYWA · KOMEZA INZIRA*',
+   'Fata akaruhuko gato, unywe amazi, wongere ukomeze kwiga cyangwa gukora content.',
+   'Koresha WhatsApp mu masaha yo kuganira wateganyije. Ubutumwa butihutirwa bushobora gutegereza; ikibazo cyihutirwa kiritabwaho. Intego ya $100,000 mu myaka itatu yubakwa n’intambwe nto za content ukora buri gihe.',
+   'Code 27 irinda umutungo wawe. Code 190 irinda amahame yawe bwite.'
+  ],
   evening:[
-   ['EVENING REVIEW · FINISH WITH INTENTION','What did you advance today: learning, content, health or discipline?','Review your money choices (27), personal boundaries (190) and emotional discipline. Your $100,000 channel target needs consistent work, patient learning and useful content.','Close public chats, prepare tomorrow’s first task and be in bed before midnight.','ISUZUMA RYO KU NIMUGOROBA · SOZA UFITE INTEGO','Ni iki wateje imbere uyu munsi: amasomo, content, ubuzima cyangwa discipline?','Suzuma uko warinze amafaranga (27), amahame yawe (190), n’uko wagenzuye amarangamutima. Intego ya channel ya $100,000 isaba gukora buri gihe, kwiga wihanganye no gukora content ifasha abantu.','Soza ibiganiro rusange, tegura igikorwa cya mbere cy’ejo kandi uryame mbere ya saa sita z’ijoro.']
+   '🌙 *EVENING REVIEW · FINISH WITH INTENTION*',
+   'What did you advance today: learning, content, health or discipline?',
+   'Review your money choices (27), personal boundaries (190) and emotional discipline. Your $100,000 channel target needs consistent work, patient learning and useful content.',
+   'Close public chats, prepare tomorrow’s first task and be in bed before midnight.',
+   '🌙 *ISUZUMA RYO KU NIMUGOROBA · SOZA UFITE INTEGO*',
+   'Ni iki wateje imbere uyu munsi: amasomo, content, ubuzima cyangwa discipline?',
+   'Suzuma uko warinze amafaranga (27), amahame yawe (190), n’uko wagenzuye amarangamutima. Intego ya channel ya $100,000 isaba gukora buri gihe, kwiga wihanganye no gukora content ifasha abantu.',
+   'Soza ibiganiro rusange, tegura igikorwa cya mbere cy’ejo kandi uryame mbere ya saa sita z’ijoro.'
+  ]
  };
- const a=sets[slot]||sets.morning,mid=Math.ceil(a.length/2),en=a.slice(0,mid).join('\n\n'),rw=a.slice(mid).join('\n\n');
+ const lines=sets[slot]||sets.morning;
+ const mid=Math.ceil(lines.length/2);
+ const en=lines.slice(0,mid).join('\n\n');
+ const rw=lines.slice(mid).join('\n\n');
  return header('YOUR DAILY DIRECTION · '+slot.toUpperCase(),date)+'\n'+(lang()==='en'?en:lang()==='rw'?rw:en+'\n\n'+rw);
 }
 async function runPurposeReminders(sock,now,local){
