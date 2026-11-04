@@ -43,7 +43,19 @@ function dayPrompt(date){
  const l=lang(),t=LANG[l]||LANG.bilingual;
  const types=['focus','study','work','home','travel','spiritual','rest','free','sunday'];
  const rw={focus:'Kwibanda',study:'Kwiga',work:'Akazi',home:'Murugo',travel:'Urugendo',spiritual:'Iby’umwuka',rest:'Kuruhuka',free:'Bisanzwe',sunday:'Ku cyumweru'};
- return header(t.morning+' ☀️',date)+'\n'+t.choose+'\n\n'+types.map((x,i)=>(i+1)+'. *'+x.toUpperCase()+'*'+(l==='en'?'':l==='rw'?' — '+rw[x]:' — '+rw[x])).join('\n')+'\n\nReply: *.life choose <type>*\nExample: .life choose study\nSpecial day: *.life templates*';
+ return header(t.morning+' ☀️',date)+'\n'+t.choose+'\n\n'+types.map((x,i)=>(i+1)+'. *'+x.toUpperCase()+'*'+(l==='en'?'':l==='rw'?' — '+rw[x]:' — '+rw[x])).join('\n')+'\n\nReply: *.life choose <type>*\nExample: .life choose study\nSpecial day: *.life templates*'+growthBrief();
+}
+function growthBrief(){
+ const goals=life.listGoals().filter(x=>x.status==='active').slice(0,5);
+ const pillars=life.listPillars().filter(x=>x.status==='active');
+ const plans=life.listPreventionPlans().filter(x=>x.active).slice(0,3);
+ const out=['\\n🌿 *LIFE PILLARS · INKINGI Z’UBUZIMA*',
+   ...pillars.map(x=>'• '+x.name+': '+x.progress+'%'),
+   '\\n🎯 *ACTIVE GOALS · INTEGO ZIKORA*',
+   ...(goals.length?goals.map(x=>'• '+x.title):[say('No active goals added yet.','Nta ntego ikora urashyiramo.')]),
+   '\\n🛡️ *PREVENTION · KWIYITAHO NO KWIHANGANA*',
+   ...(plans.length?plans.map(x=>'• If '+x.trigger+' → '+x.response):[say('Add a prevention plan for a situation that may derail your day.','Shyiraho gahunda yo kwirinda ikintu gishobora kukubuza kugera ku ntego.')])];
+ return out.join('\\n');
 }
 async function sendLifeSticker(sock,kind='morning'){
  const jid=self(sock);if(!jid)throw new Error('WhatsApp self chat unavailable');
