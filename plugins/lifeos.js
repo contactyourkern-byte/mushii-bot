@@ -384,7 +384,7 @@ function help() {
         '.life google connect|status|disconnect · .life upload data · .life backups',
         '.life restore <Drive-file-id> yes · .life export data',
         '.life email test|daily|status · .life coach on|off|<question> · .life doctor',
-        '.focus on|off · .life settings purpose on|off · purposetimes HH:MM HH:MM HH:MM · .life status',
+        '.life focus on|off · .life settings purpose on|off · purposetimes HH:MM HH:MM HH:MM · .life status',
         '_Owner-only and private-chat-only._'
     ].join('\n');
 }
@@ -771,9 +771,9 @@ async function runNext(sock,msg,args,ctx) {
     return ctx.reply(nextText(x));
 }
 module.exports = {
-    commands:['life','agenda','next','timeline','focus'],
+    commands:['life','agenda','next','timeline'],
     description:'Owner-only private Life OS: agenda, routines, reminders, goals, journal and next action',
     permission:'owner', group:false, private:true, onConnectionOpen, onConnectionClose,
-    run:async(sock,msg,args,ctx)=>{ const command=String(ctx.command||'').toLowerCase(); if(command==='next') return runNext(sock,msg,args,ctx); if(command==='agenda'||command==='timeline') return runLife(sock,msg,[command==='timeline'?'timeline':'agenda',...(args||[])],ctx); if(command==='focus') return runLife(sock,msg,['focus',...(args||[])],ctx); return runLife(sock,msg,args,ctx); },
+    run:async(sock,msg,args,ctx)=>{ const command=String(ctx.command||'').toLowerCase(); if(command==='next') return runNext(sock,msg,args,ctx); if(command==='agenda'||command==='timeline') return runLife(sock,msg,[command==='timeline'?'timeline':'agenda',...(args||[])],ctx); return runLife(sock,msg,args,ctx); },
     __test:{life,agenda,nextText,tick,stop:stopScheduler,android,notificationContent,purposeReminderText}
 };
