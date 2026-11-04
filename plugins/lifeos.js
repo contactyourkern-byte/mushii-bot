@@ -80,6 +80,31 @@ function growthBrief(){
    ...(plans.length?plans.map(x=>'• If '+x.trigger+' → '+x.response):[say('Add a prevention plan for a situation that may derail your day.','Shyiraho gahunda yo kwirinda ikintu gishobora kukubuza kugera ku ntego.')])];
  return out.join('\n');
 }
+
+function purposeReminderText(slot,date){
+ const sets={
+  morning:[
+   ['PURPOSE CHECK-IN · MORNING','27 · Protect your money: pause before spending and follow your plan.','190 · Protect your personal boundaries: practice self-control and choose what respects your values.','Keep building Software Engineering skills and take one measurable step toward your three-year channel ambition.','Handle emotions with dignity. Be respectful; do not send impulsive messages.','KWIBUKA INTEGO · MU GITONDO','27 · Rinda amafaranga yawe: banza utekereze mbere yo kuyakoresha kandi ugire gahunda.','190 · Rinda amahame yawe bwite: komeza kwifata no guhitamo ibihuye n’indangagaciro zawe.','Komeza kwiga Software Engineering kandi ukore intambwe imwe ifatika ijyanye n’intego ya channel yawe y’imyaka itatu.','Genza amarangamutima mu cyubahiro. Wubahe abandi kandi wirinde kohereza ubutumwa uhubutse.'],
+  midday:[
+   ['MIDDAY RESET · STAY ON COURSE','Take a short break, drink water, then return to focused learning or content creation.','Use WhatsApp during planned chat windows. Non-urgent messages can wait; genuine emergencies deserve attention.','Code 27 protects your resources. Code 190 protects your personal boundaries.','KWIYIBUTSA KU MANYWA · KOMEZA INZIRA','Fata akaruhuko gato, unywe amazi, wongere ukomeze kwiga cyangwa gukora content.','Koresha WhatsApp mu masaha yo kuganira wateganyije. Ubutumwa butihutirwa bushobora gutegereza; ikibazo cyihutirwa kiritabwaho.','Code 27 irinda umutungo wawe. Code 190 irinda amahame yawe bwite.'],
+  evening:[
+   ['EVENING REVIEW · FINISH WITH INTENTION','What did you advance today: learning, content, health or discipline?','Review your money choices (27), personal boundaries (190) and emotional discipline.','Close public chats, prepare tomorrow’s first task and be in bed before midnight.','ISUZUMA RYO KU NIMUGOROBA · SOZA UFITE INTEGO','Ni iki wateje imbere uyu munsi: amasomo, content, ubuzima cyangwa discipline?','Suzuma uko warinze amafaranga (27), amahame yawe (190), n’uko wagenzuye amarangamutima.','Soza ibiganiro rusange, tegura igikorwa cya mbere cy’ejo kandi uryame mbere ya saa sita z’ijoro.']
+ };
+ const a=sets[slot]||sets.morning,mid=Math.ceil(a.length/2),en=a.slice(0,mid).join('\\n\\n'),rw=a.slice(mid).join('\\n\\n');
+ return header('YOUR DAILY DIRECTION · '+slot.toUpperCase(),date)+'\\n'+(lang()==='en'?en:lang()==='rw'?rw:en+'\\n\\n'+rw);
+}
+async function runPurposeReminders(sock,now,local){
+ const settings=life.getSettings();
+ if(!settings.purposeReminders)return;
+ const times=settings.purposeReminderTimes||{morning:'06:30',midday:'13:00',evening:'20:30'};
+ for(const slot of ['morning','midday','evening']){
+  const time=times[slot],key='purpose:'+local.date+':'+slot;
+  if(!time||local.time<time||life._getState().sentEvents[key])continue;
+  const dueAt=localDateTimeToEpoch(local.date,time,settings.timezone);
+  if(now-dueAt>90*60000){life.markNotificationMissed(key);continue;}
+  await deliver(sock,key,purposeReminderText(slot,local.date),{kind:'purpose',title:'Daily purpose checkpoint · '+slot});
+ }
+}
 async function sendLifeSticker(sock,kind='morning'){
  const jid=self(sock);if(!jid)throw new Error('WhatsApp self chat unavailable');
  const labels={morning:['NEW DAY','GROW WITH PURPOSE'],goal:['GOAL ACHIEVED','ONE STEP AT A TIME'],discipline:['STAY THE COURSE','CHOOSE WHAT HELPS YOU'],evening:['REFLECT & RESET','REST WITH GRATITUDE']};
