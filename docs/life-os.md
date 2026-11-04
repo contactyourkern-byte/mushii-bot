@@ -43,11 +43,11 @@ All Life OS commands are owner-only and private-chat-only. Do not use Life OS co
 | .life record list [query] / .life record show <id> | Read personal records |
 | .life record edit <id> | <category> | <title> | <value> | Update a personal record |
 | .life record delete <id> | Delete a personal record |
-| .life book create <title> | <description> / list | Create or list private knowledge books |
-| .life book add <book-id> | <sub-book> | <title> | <content> | Save a book entry under a sub-book/section |
-| .life book entries <book-id> [search] / sections <book-id> | Browse entries or sub-books |
-| .life book show <book-id> <entry-id> / edit ... | Read or update a book entry |
-| .life book delete-entry <book-id> <entry-id> / delete <book-id> | Delete an entry or a whole book |
+| `.life book create <title> \| <description>` / `.life book list` | Create or list private knowledge books |
+| `.life book add <book-id> \| <sub-book> \| <title> \| <content>` | Save a book entry under a sub-book/section |
+| `.life book entries <book-id> [search]` / `.life book sections <book-id>` | Browse entries or sub-books |
+| `.life book show <book-id> <entry-id>` / `.life book edit ...` | Read or update a book entry |
+| `.life book delete-entry <book-id> <entry-id>` / `.life book delete <book-id>` | Delete an entry or a whole book |
 | .life report day [date] / .life report week [date] | Review progress |
 | .life google connect/status/disconnect | Connect or inspect Google services |
 | .life upload data | Save an encrypted local copy and upload it to Drive |
