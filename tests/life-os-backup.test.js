@@ -19,6 +19,7 @@ function sampleState() {
         routines: [],
         reminders: [],
         records: [{ id: 'p1', category: 'work', title: 'Project', value: 'A private note' }],
+        books: [{ id: 'b1', title: 'Knowledge', description: 'Private book', entries: [{ id: 'e1', section: 'Study', title: 'Node notes', content: 'Async JavaScript' }] }],
         goals: [],
         journal: [],
         checkins: [],
