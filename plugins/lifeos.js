@@ -4,7 +4,29 @@ const { createLifeOS, localParts, localDateTimeToEpoch, validateDate } = require
 const { createEncryptedBackup, decryptBackup } = require('../lib/life-os-backup');
 const google = require('../lib/life-os-google');
 const life = createLifeOS();
-// PURPOSE_SEED_PLACEHOLDER
+const PURPOSE_GOALS = [
+    "Live with purpose: make daily choices that reflect my values and long-term direction.",
+    "Code 27 — Protect my money: pause before non-essential spending, follow a budget and avoid impulsive financial decisions.",
+    "Code 190 — Protect my personal boundaries: practice self-control and choose actions that respect my values.",
+    "Faceless YouTube — build at least one channel toward a $100,000 revenue ambition within three years through consistent, audience-focused work.",
+    "Emotional discipline — respond with dignity, keep private feelings private when appropriate and set respectful boundaries.",
+    "Software Engineering — strengthen my skills and complete classes, assignments, projects and exams consistently.",
+    "Health and discipline — begin at 06:00 with prayer and sport, care for my body and sleep before midnight.",
+    "WhatsApp discipline — use planned chat windows and protect study and content-creation time from non-urgent messages."
+];
+const PURPOSE_PREVENTIONS = [
+ ['When I feel pressure to spend impulsively','Pause for 24 hours, review my budget and choose the decision that protects my future.','financial'],
+ ['When my personal boundaries are under pressure','Step away, reset my environment and choose the action that aligns with my values.','character'],
+ ['When emotions are intense or I want to send an impulsive message','Pause, breathe, respond respectfully and take space without being rude.','relationships'],
+ ['When a non-urgent chat interrupts focused work','Leave the chat for the next planned communication window and return to the task.','character']
+];
+function ensurePurposeFoundation(){
+ const goals=life.listGoals();
+ for(const title of PURPOSE_GOALS) if(!goals.some(x=>x.title===title)) life.addGoal(title);
+ const plans=life.listPreventionPlans();
+ for(const [trigger,response,pillar] of PURPOSE_PREVENTIONS) if(!plans.some(x=>x.trigger===trigger)) life.addPreventionPlan(trigger,response,pillar);
+}
+try { ensurePurposeFoundation(); } catch(error) { console.warn('[LifeOS] Purpose foundation seed failed: '+String(error.message||error).slice(0,160)); }
 let socket = null, timer = null, busy = false;
 const retry = new Map();
 const BACKUP_DIRECTORY = require('node:path').join(__dirname, '..', 'data', 'life-os-backups');
