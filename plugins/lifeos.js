@@ -132,13 +132,23 @@ function android(title, text, notificationId) {
         '--vibrate', '200,300,200',
     ], { timeout: 7000 }, e => e ? reject(e) : resolve()));
 }
-function notificationContent(event) {
+function notificationContent(event, fullText = '') {
     if (event.category === 'private' || /private.*check-in/i.test(event.title || '')) {
         return { title: 'MUSHII · Private reminder', text: 'Private check-in · 27 / 190' };
     }
+    const preview = String(fullText || '')
+        .replace(/[*_~`]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 220);
+    const title = event.kind === 'purpose' ? 'MUSHII · Daily purpose'
+        : event.kind === 'agenda-advance' ? 'MUSHII · Get ready'
+        : event.kind === 'agenda-start' ? 'MUSHII · Start now'
+        : event.kind === 'reminder' ? 'MUSHII · Personal reminder'
+        : 'MUSHII · Next action';
     return {
-        title: event.kind === 'reminder' ? 'MUSHII · Personal reminder' : 'MUSHII · Next action',
-        text: [event.time, event.title].filter(Boolean).join(' · '),
+        title,
+        text: preview || [event.time, event.title].filter(Boolean).join(' · '),
     };
 }
 function notificationTargets(settings) {
@@ -167,7 +177,7 @@ async function deliver(sock, key, text, event = {}) {
                 if (!sock || !self(sock)) continue;
                 await send(sock, text);
             } else if (channel === 'android') {
-                const content = notificationContent(event);
+                const content = notificationContent(event, text);
                 await android(content.title, content.text, key.slice(-50));
             } else if (channel === 'email') {
                 const to = String(process.env.LIFE_OS_EMAIL_TO || '').trim();
@@ -750,5 +760,5 @@ module.exports = {
     description:'Owner-only private Life OS: agenda, routines, reminders, goals, journal and next action',
     permission:'owner', group:false, private:true, onConnectionOpen, onConnectionClose,
     run:async(sock,msg,args,ctx)=>{ const command=String(ctx.command||'').toLowerCase(); if(command==='next') return runNext(sock,msg,args,ctx); if(command==='agenda'||command==='timeline') return runLife(sock,msg,[command==='timeline'?'timeline':'agenda',...(args||[])],ctx); return runLife(sock,msg,args,ctx); },
-    __test:{life,agenda,nextText,tick,stop:stopScheduler,android}
+    __test:{life,agenda,nextText,tick,stop:stopScheduler,android,notificationContent,purposeReminderText}
 };
