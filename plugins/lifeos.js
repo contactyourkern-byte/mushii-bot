@@ -417,6 +417,11 @@ function help() {
         '.life remind add <YYYY-MM-DD> <HH:MM> <task> · .life remind list|delete <id>',
         '.life goal add <goal> · .life goals · .life goal done|pause|resume|edit|delete <id>',
         '.life journal add|read|search|edit|delete ...',
+        '.life book create <title> | <description> · list [query]',
+        '.life book add <book-id> | <sub-book> | <title> | <content>',
+        '.life book entries <book-id> [search] · sections <book-id>',
+        '.life book edit <book-id> | <entry-id> | <sub-book> | <title> | <content>',
+        '.life book show <book-id> <entry-id> · delete-entry <book-id> <entry-id> · delete <book-id>',
         '.life code <27|190> <kept|urge|slipped> [note] · .life codes',
         '.life record add <category> | <title> | <value> · list|show|edit|delete',
         '.life report day [YYYY-MM-DD] · .life report week',
@@ -567,6 +572,48 @@ async function runLife(sock,msg,args,ctx) {
             if(act==='delete') return reply(life.deleteGoal(p[0])?'✅ Goal deleted.':'Goal not found.');
             const status=act==='done'?'done':act==='pause'?'paused':act==='resume'?'active':null;
             return status?reply(life.updateGoal(p[0],{status})?'✅ Goal status: '+status:'Goal not found.'):reply('Use .life goal add|done|pause|resume|edit|delete ....');
+        }
+        if(sec==='book'||sec==='books') {
+            if(act==='create') {
+                const fields=p.join(' ').split('|').map(x=>x.trim());
+                const book=life.createBook(fields[0],fields.slice(1).join(' | '));
+                return reply('📚 *MUSHII BOOK CREATED*\n'+book.title+'\nBook ID: *'+book.id+'*\n\nAdd a sub-book entry with:\n.life book add '+book.id+' | Ideas | First note | Write your information here');
+            }
+            if(act==='list'||!act) {
+                const books=life.listBooks(p.join(' '));
+                return reply(books.length?'📚 *YOUR MUSHII BOOKS*\n'+books.map(book=>'📖 *'+book.title+'* · '+book.id+'\n'+book.entryCount+' entries'+(book.description?' · '+book.description:'')).join('\n\n'):'No books yet. Create one with .life book create <title> | <description>.');
+            }
+            if(act==='add') {
+                const fields=p.join(' ').split('|').map(x=>x.trim());
+                if(fields.length<4) return reply('Use .life book add <book-id> | <sub-book> | <title> | <content>.');
+                const entry=life.addBookEntry(fields[0],fields[1],fields[2],fields.slice(3).join(' | '));
+                return reply('✅ *BOOK ENTRY SAVED*\nEntry ID: *'+entry.id+'*\nSub-book: '+entry.section+'\nTitle: '+entry.title+'\n\nYour book is saved locally. Upload it encrypted to Drive with .life upload data.');
+            }
+            if(act==='entries'||act==='read'||act==='search') {
+                const result=life.listBookEntries(p[0],p.slice(1).join(' '));
+                if(!result) return reply('Book not found. Use .life book list.');
+                return reply(result.entries.length?'📖 *'+result.book.title+'*\n'+result.entries.map(entry=>'• *'+entry.id+'* · '+entry.section+'\n'+entry.title+'\n'+entry.content.slice(0,900)).join('\n\n'):'No entries found in this book.');
+            }
+            if(act==='sections'||act==='subbooks') {
+                const result=life.listBookEntries(p[0]);
+                if(!result) return reply('Book not found. Use .life book list.');
+                const sections=[...new Set(result.entries.map(entry=>entry.section))];
+                return reply(sections.length?'📚 *SUB-BOOKS · '+result.book.title+'*\n'+sections.map(section=>'• '+section+' · '+result.entries.filter(entry=>entry.section===section).length+' entries').join('\n'):'No sub-books yet. Add an entry with a section name.');
+            }
+            if(act==='show') {
+                const result=life.listBookEntries(p[0]);
+                const entry=result?.entries.find(item=>item.id===p[1]);
+                return reply(entry?'📖 *'+entry.title+'*\nBook: '+result.book.title+'\nSub-book: '+entry.section+'\n\n'+entry.content:'Book entry not found.');
+            }
+            if(act==='edit') {
+                const fields=p.join(' ').split('|').map(x=>x.trim());
+                if(fields.length<5) return reply('Use .life book edit <book-id> | <entry-id> | <sub-book> | <title> | <content>.');
+                const ok=life.updateBookEntry(fields[0],fields[1],{section:fields[2],title:fields[3],content:fields.slice(4).join(' | ')});
+                return reply(ok?'✅ Book entry updated.':'Book or entry not found.');
+            }
+            if(act==='delete-entry') return reply(life.deleteBookEntry(p[0],p[1])?'✅ Book entry deleted.':'Book or entry not found.');
+            if(act==='delete') return reply(life.deleteBook(p[0])?'🗑️ Book and all its entries deleted.':'Book not found.');
+            return reply('.life book create|list|add|entries|sections|show|edit|delete-entry|delete ...');
         }
         if(sec==='journal') {
             if(act==='add') return reply('📝 Journal saved: *'+life.addJournalEntry(p.join(' ')).id+'*');
