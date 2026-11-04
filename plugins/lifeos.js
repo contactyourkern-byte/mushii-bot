@@ -344,15 +344,17 @@ function help() {
     return [
         '🌱 *MUSHII LIFE OS*',
         '.life agenda [tomorrow|YYYY-MM-DD]',
-        '.life day <morning|evening|free|travel|home|sunday|focus|study|work|spiritual|rest> [date]',
-        '.life choose <type> · .life templates · .life template <name> [date]',
+        '.life day <class-morning|class-afternoon|free-day|special> [date]',
+        '.life choose <class-morning|class-afternoon|free-day|special>',
+        '.life special add <HH:MM> <duration> <task> · list · remove <id>',
+        '.life templates · .life template <name> [date] · .timeline',
         '.life pillars · .life pillar <id> <0-100> [note]',
         '.life prevention add <trigger> | <response> [| pillar-id] · list · delete <id>',
         '.life psalm · .life language bilingual|en|rw · .life sticker [morning|goal|discipline|evening]',
         '.life checkin on|off [HH:MM]',
-        '.life class <mon|tue|...> <morning|evening|off>',
+        '.life class <mon|tue|...> <morning|afternoon|off>',
         '.life agenda add|edit|move|remove ...',
-        '.next [done|skip|delay <minutes>]',
+        '.next [done|skip [reason]|delay <minutes>|reschedule HH:MM]',
         '.life routine add <HH:MM> <daily|weekdays|weekends|mon,wed,fri> <task>',
         '.life routine list|edit|pause|resume|delete|done <id>',
         '.life remind add <YYYY-MM-DD> <HH:MM> <task> · .life remind list|delete <id>',
@@ -364,7 +366,7 @@ function help() {
         '.life google connect|status|disconnect · .life upload data · .life backups',
         '.life restore <Drive-file-id> yes · .life export data',
         '.life email test|daily|status · .life coach on|off|<question> · .life doctor',
-        '.life focus on|off · .life settings ... · .life status',
+        '.life focus on|off · .life settings purpose on|off · purposetimes HH:MM HH:MM HH:MM · .life status',
         '_Owner-only and private-chat-only._'
     ].join('\n');
 }
