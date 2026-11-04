@@ -1,5 +1,7 @@
 'use strict';
 
+const { fmt } = require('../lib/theme');
+
 const MENU_LINES = [
     '*🌸 WELCOME TO MUSHII*',
     '_Your friendly WhatsApp companion · Umufasha wawe wa buri munsi._',
@@ -79,7 +81,7 @@ module.exports = {
                 ? `📖 *MUSHII Help: ${command}*\n\nUsage: ${COMMAND_HELP[command]}`
                 : `No MUSHII Entertainment help is available for ${command}. Use .menu.`);
         }
-        return ctx.reply(buildMenu());
+        return ctx.reply(fmt(buildMenu()));
     },
 
     __test: { buildMenu, menuCommands: [...new Set([...Object.keys(COMMAND_HELP), 'menu', 'help', 'commands'])] }
