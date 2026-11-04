@@ -391,7 +391,7 @@ test('non-greeting messages are left alone without AI replies or owner handoff',
     assert.equal(notices.length, 0);
 });
 
-test('failed generation releases cooldown so a later message can be answered', async t => {
+test('uses a safe greeting fallback when AI generation fails, then applies cooldown', async t => {
     const filePath = await createStatePath(t);
     let calls = 0;
     const autoReply = createAutoReply({
