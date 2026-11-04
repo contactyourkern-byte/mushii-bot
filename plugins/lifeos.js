@@ -759,9 +759,9 @@ async function runNext(sock,msg,args,ctx) {
     return ctx.reply(nextText(x));
 }
 module.exports = {
-    commands:['life','agenda','next','timeline'],
+    commands:['life','agenda','next','timeline','focus'],
     description:'Owner-only private Life OS: agenda, routines, reminders, goals, journal and next action',
     permission:'owner', group:false, private:true, onConnectionOpen, onConnectionClose,
-    run:async(sock,msg,args,ctx)=>{ const command=String(ctx.command||'').toLowerCase(); if(command==='next') return runNext(sock,msg,args,ctx); if(command==='agenda'||command==='timeline') return runLife(sock,msg,[command==='timeline'?'timeline':'agenda',...(args||[])],ctx); return runLife(sock,msg,args,ctx); },
+    run:async(sock,msg,args,ctx)=>{ const command=String(ctx.command||'').toLowerCase(); if(command==='next') return runNext(sock,msg,args,ctx); if(command==='agenda'||command==='timeline') return runLife(sock,msg,[command==='timeline'?'timeline':'agenda',...(args||[])],ctx); if(command==='focus') return runLife(sock,msg,['focus',...(args||[])],ctx); return runLife(sock,msg,args,ctx); },
     __test:{life,agenda,nextText,tick,stop:stopScheduler,android,notificationContent,purposeReminderText}
 };
