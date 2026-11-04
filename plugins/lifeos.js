@@ -290,7 +290,7 @@ function help() {
         '.life report day [YYYY-MM-DD] · .life report week',
         '.life google connect|status|disconnect · .life upload data · .life backups',
         '.life restore <Drive-file-id> yes · .life export data',
-        '.life email test|status · .life coach on|off|<question> · .life doctor',
+        '.life email test|daily|status · .life coach on|off|<question> · .life doctor',
         '.life focus on|off · .life settings ... · .life status',
         '_Owner-only and private-chat-only._'
     ].join('\n');
@@ -314,8 +314,10 @@ async function runLife(sock,msg,args,ctx) {
         if(sec==='templates')return reply(header('SPECIAL DAY TEMPLATES')+'\nexam · assignment · meeting · birthday · travel · project · reset · worship · review · achievement\n\n.life template exam [YYYY-MM-DD]');
         if(sec==='template'){
             const date=validateDate(p[p.length-1])?p.pop():today;
-            const item=life.applySpecialTemplate(date,act);
-            return reply('✨ *'+act.toUpperCase()+' TEMPLATE APPLIED*\n'+date+'\n\n'+agenda(date)+'\n'+say('Adjust times to your real commitments.','Hindura amasaha ajyane n’inshingano zawe nyazo.'));
+            life.applySpecialTemplate(date,act);
+            const result=await reply('✨ *'+act.toUpperCase()+' TEMPLATE APPLIED*\n'+date+'\n\n'+agenda(date)+'\n'+say('Adjust times to your real commitments.','Hindura amasaha ajyane n’inshingano zawe nyazo.'));
+            if(date===today) life.markNotificationSent('morning-agenda:'+date);
+            return result;
         }
         if(sec==='psalm')return reply(dailyPsalm(today));
         if(sec==='language'){
