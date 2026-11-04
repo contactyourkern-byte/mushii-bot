@@ -154,7 +154,6 @@ function createAwayPlugin(autoReply = createAutoReply()) {
                     '• Short greetings only · Kinyarwanda and English',
                     '• At most 2 automatic replies per contact in 24 hours',
                     '• 15-second minimum cooldown per contact',
-                    '• Sensitive requests are handed to the owner',
                     '• Every reply includes an AI identity footer and one optional personal phrase',
                     '',
                     'Commands: .away on | .away off',
