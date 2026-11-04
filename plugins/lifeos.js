@@ -93,7 +93,7 @@ function growthBrief(){
 function purposeReminderText(slot,date){
  const sets={
   morning:[
-   ['PURPOSE CHECK-IN · MORNING','27 · Protect your money: pause before spending and follow your plan.','190 · Protect your personal boundaries: practice self-control and choose what respects your values.','Keep building Software Engineering skills and take one measurable step toward your three-year channel ambition.','Handle emotions with dignity. Be respectful; do not send impulsive messages.','KWIBUKA INTEGO · MU GITONDO','27 · Rinda amafaranga yawe: banza utekereze mbere yo kuyakoresha kandi ugire gahunda.','190 · Rinda amahame yawe bwite: komeza kwifata no guhitamo ibihuye n’indangagaciro zawe.','Komeza kwiga Software Engineering kandi ukore intambwe imwe ifatika ijyanye n’intego ya channel yawe y’imyaka itatu.','Genza amarangamutima mu cyubahiro. Wubahe abandi kandi wirinde kohereza ubutumwa uhubutse.'],
+   ['PURPOSE CHECK-IN · MORNING','27 · Protect your money: pause before spending and follow your plan.','190 · Protect your personal boundaries: practice self-control and choose what respects your values.','Keep building Software Engineering skills and move one measurable step toward at least one channel targeting $100,000 in revenue within three years.','Handle emotions with dignity. Be respectful; do not send impulsive messages.','KWIBUKA INTEGO · MU GITONDO','27 · Rinda amafaranga yawe: banza utekereze mbere yo kuyakoresha kandi ugire gahunda.','190 · Rinda amahame yawe bwite: komeza kwifata no guhitamo ibihuye n’indangagaciro zawe.','Komeza kwiga Software Engineering kandi ukore intambwe ifatika igana kuri channel nibura imwe ifite intego yo kwinjiza $100,000 mu myaka itatu.','Genza amarangamutima mu cyubahiro. Wubahe abandi kandi wirinde kohereza ubutumwa uhubutse.'],
   midday:[
    ['MIDDAY RESET · STAY ON COURSE','Take a short break, drink water, then return to focused learning or content creation.','Use WhatsApp during planned chat windows. Non-urgent messages can wait; genuine emergencies deserve attention.','Code 27 protects your resources. Code 190 protects your personal boundaries.','KWIYIBUTSA KU MANYWA · KOMEZA INZIRA','Fata akaruhuko gato, unywe amazi, wongere ukomeze kwiga cyangwa gukora content.','Koresha WhatsApp mu masaha yo kuganira wateganyije. Ubutumwa butihutirwa bushobora gutegereza; ikibazo cyihutirwa kiritabwaho.','Code 27 irinda umutungo wawe. Code 190 irinda amahame yawe bwite.'],
   evening:[
@@ -258,9 +258,12 @@ function plus(date, n) {
 function agenda(date) {
     const tz=life.getTimezone(), day=new Intl.DateTimeFormat('en-GB',{weekday:'long',day:'2-digit',month:'short',timeZone:tz})
         .format(new Date(localDateTimeToEpoch(date,'12:00',tz)));
-    return '📅 *MUSHII AGENDA · '+day+' · '+life.getDayType(date)+'*\n\n'+life.getAgenda(date).map(x=>
-        (x.status==='done'?'✅':x.status==='skipped'?'↪️':'▫️')+' *'+x.time+'* — '+x.title+' _['+x.id+']_'
-    ).join('\n')+'\n\nUse .next for your next action.';
+    const type=life.getDayType(date);
+    const label=type==='class-morning'?'CLASS DAY · MORNING':type==='class-afternoon'?'CLASS DAY · AFTERNOON':type==='free-day'?'FREE DAY · NO CLASS':type==='special'?'SPECIAL DAY · MANUAL PLAN':type.toUpperCase();
+    const items=life.getAgenda(date);
+    return header('DAILY TIMELINE · '+label,day)+'\n\n'+items.map(x=>
+        (x.status==='done'?'✅':x.status==='skipped'?'↪️':'▫️')+' *'+x.time+'* — '+x.title+(x.note?'\n   _Note: '+x.note+'_':'')
+    ).join('\n')+'\n\n'+say('Use .next to focus on the current priority. After you mark it done, I will show you the next step.','Koresha .next wibande ku gikorwa cy’ingenzi. Nukimara kukirangiza, ndakwereka intambwe ikurikiraho.');
 }
 function whyThisMatters(item){
  const category=String(item.category||'').toLowerCase();
