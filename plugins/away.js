@@ -151,9 +151,9 @@ function createAwayPlugin(autoReply = createAutoReply()) {
                     'MUSHII AI Auto Reply is currently *' + status + '*.',
                     fixed.enabled ? '• Reply mode: fixed message' : '• Reply mode: AI-generated',
                     '',
-                    '• Context-aware private chat replies',
-                    '• Clear, polished Kinyarwanda and natural English',
-                    '• 15-second cooldown per contact',
+                    '• Short greetings only · Kinyarwanda and English',
+                    '• At most 2 automatic replies per contact in 24 hours',
+                    '• 15-second minimum cooldown per contact',
                     '• Sensitive requests are handed to the owner',
                     '• Every reply includes an AI identity footer and one optional personal phrase',
                     '',
@@ -170,7 +170,7 @@ function createAwayPlugin(autoReply = createAutoReply()) {
             return context.reply(enabled
                 ? fixedMode
                     ? '✅ *MUSHII Auto Reply is ON.*\n\nYour fixed away message will be sent to private contacts, with the MUSHII AI identity footer. Use `.awaymessage ai` to return to AI-generated replies.'
-                    : '✅ *MUSHII AI Auto Reply is ON.*\n\nProfessional contextual replies are enabled for private chats. The AI uses recent conversation context, a 15-second per-contact cooldown, and hands sensitive or owner-only matters to you for a manual reply.'
+                    : '✅ *MUSHII AI Auto Reply is ON.*\n\nI will warmly answer short greetings only, at most twice per contact in 24 hours. Ordinary messages stay for you to answer, and all existing commands such as `.menu` continue working normally.'
                 : '✅ *MUSHII AI Auto Reply is OFF.*\n\nAutomatic replies are disabled and temporary conversation memory has been cleared.');
         }
     };
