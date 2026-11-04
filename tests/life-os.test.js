@@ -32,7 +32,11 @@ test('default timezone and morning agenda reminder are configured for Kigali', a
     const settings = life.getSettings();
     assert.equal(settings.timezone, 'Africa/Kigali');
     assert.equal(settings.dailyAgenda, true);
-    assert.equal(settings.dailyAgendaTime, '05:55');
+    assert.equal(settings.dailyAgendaTime, '06:05');
+    assert.equal(settings.dailyCheckin, true);
+    assert.equal(settings.dailyCheckinTime, '06:00');
+    assert.equal(settings.purposeReminders, true);
+    assert.deepEqual(settings.purposeReminderTimes, { morning: '06:30', midday: '13:00', evening: '20:30' });
     assert.equal(settings.advanceMinutes, 10);
 });
 
@@ -232,4 +236,69 @@ test('Life OS notification preferences and scheduled backup times are validated'
     assert.throws(() => life.setAutoBackup(true, '29:99'), /HH:MM/);
     assert.equal(life.setAICoach(true), true);
     assert.equal(life.getSettings().aiCoach, true);
+});
+
+
+test('purpose reminders default to three daily checkpoints and validate their order', async t => {
+    const filePath = await makePath(t);
+    const life = createLifeOS({ filePath });
+    const settings = life.getSettings();
+    assert.equal(settings.purposeReminders, true);
+    assert.deepEqual(settings.purposeReminderTimes, { morning: '06:30', midday: '13:00', evening: '20:30' });
+    assert.deepEqual(life.setPurposeReminders(true, { morning: '06:15', midday: '12:45', evening: '20:15' }), {
+        enabled: true,
+        times: { morning: '06:15', midday: '12:45', evening: '20:15' },
+    });
+    assert.throws(() => life.setPurposeReminders(true, { morning: '13:00', midday: '12:00', evening: '20:00' }), /morning, midday, evening order/);
+    const restarted = createLifeOS({ filePath });
+    assert.equal(restarted.getSettings().purposeReminderTimes.morning, '06:15');
+});
+
+test('class morning, class afternoon and free day use dedicated schedule templates', async t => {
+    const life = createLifeOS({ filePath: await makePath(t) });
+    life.setWeeklyClassType('tue', 'morning');
+    life.setWeeklyClassType('wed', 'afternoon');
+    assert.equal(life.getDayType('2026-11-03'), 'class-morning');
+    assert.equal(life.getDayType('2026-11-04'), 'class-afternoon');
+    assert.equal(life.getDayType('2026-11-05'), 'free-day');
+    const morning = life.getAgenda('2026-11-03');
+    assert.equal(morning.find(item => item.id === 'morning-foundation').time, '06:00');
+    assert.equal(morning.find(item => item.id === 'university').time, '08:00');
+    const afternoon = life.getAgenda('2026-11-04');
+    assert.equal(afternoon.find(item => item.id === 'study-focus').time, '08:00');
+    assert.equal(afternoon.find(item => item.id === 'university').time, '14:00');
+    assert.ok(afternoon.some(item => item.category === 'career'));
+    assert.ok(afternoon.some(item => item.category === 'rest'));
+    const free = life.getAgenda('2026-11-05');
+    assert.ok(free.some(item => item.category === 'education'));
+    assert.ok(free.some(item => item.category === 'career'));
+});
+
+test('special-day manual tasks are date-specific and respect the 23:00 wind-down boundary', async t => {
+    const life = createLifeOS({ filePath: await makePath(t) });
+    life.recordDailyCheckin('2026-11-03', 'special', 'Project launch');
+    const id = life.addDayAgendaItem('2026-11-03', '10:00', 45, 'Launch checklist');
+    assert.ok(life.getAgenda('2026-11-03').some(item => item.id === id && item.title === 'Launch checklist'));
+    assert.ok(!life.getAgenda('2026-11-04').some(item => item.id === id));
+    assert.throws(() => life.addDayAgendaItem('2026-11-03', '22:30', 60, 'Late task'), /finish special-day tasks by 23:00/);
+    assert.equal(life.removeDayAgendaItem('2026-11-03', id), true);
+});
+
+test('agenda reminders have separate advance and start events', async t => {
+    const filePath = await makePath(t);
+    let now = localDateTimeToEpoch('2026-11-03', '07:50', 'Africa/Kigali');
+    const life = createLifeOS({ filePath, now: () => now });
+    life.setDayType('class-morning', '2026-11-03');
+    const early = life.getDueNotifications(now);
+    assert.ok(early.events.some(item => item.kind === 'agenda-advance' && item.key === 'agenda:2026-11-03:university'));
+    now = localDateTimeToEpoch('2026-11-03', '08:01', 'Africa/Kigali');
+    const atStart = life.getDueNotifications(now);
+    assert.ok(atStart.events.some(item => item.kind === 'agenda-start' && item.key === 'agenda-start:2026-11-03:university'));
+});
+
+test('skipped agenda tasks retain the reason in the daily timeline', async t => {
+    const life = createLifeOS({ filePath: await makePath(t) });
+    life.recordDailyCheckin('2026-11-03', 'class-morning');
+    assert.equal(life.markAgendaItem('2026-11-03', 'university', 'skipped', 'Unexpected university closure'), true);
+    assert.equal(life.getAgenda('2026-11-03').find(item => item.id === 'university').note, 'Unexpected university closure');
 });
