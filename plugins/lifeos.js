@@ -283,17 +283,25 @@ async function tick(sock = socket) {
         if (settings.dailyAgenda && !sent[agendaKey] && local.time >= settings.dailyAgendaTime) {
             const dueAt = localDateTimeToEpoch(local.date, settings.dailyAgendaTime, settings.timezone);
             if (now - dueAt > 90 * 60000) life.markNotificationMissed(agendaKey);
-            else if(!settings.dailyCheckin||life.getDailyCheckin(local.date)) await deliver(sock, agendaKey, agenda(local.date) + '\n\n🌅 *Start with your next action.*', {kind:'agenda',title:'Your daily agenda is ready'});
-            else await deliver(sock,agendaKey,dayPrompt(local.date),{kind:'agenda',title:'Choose your day'});
+            else if (!settings.dailyCheckin || life.getDailyCheckin(local.date)) {
+                await deliver(sock, agendaKey, agenda(local.date) + '\n\n🌅 *Start with your next action · Tangira n’igikorwa gikurikiraho.*', {kind:'agenda',title:'Your daily agenda is ready'});
+            }
+            // The 06:00 check-in remains the single prompt until the day type is chosen.
         }
+        await runPurposeReminders(sock,now,local);
         const due = life.getDueNotifications(now);
         due.stale.forEach(key => life.markNotificationMissed(key));
         for (const event of due.events.slice(0, 4)) {
-            const label = event.kind === 'routine' ? '🔁 *ROUTINE REMINDER*'
-                : event.kind === 'agenda' ? '⏰ *NEXT ACTION*' : '🔔 *PERSONAL REMINDER*';
+            const label = event.kind === 'routine' ? '🔁 *ROUTINE REMINDER · ISUBIRAMO*'
+                : event.kind === 'agenda-advance' ? '⏳ *ADVANCE REMINDER · ITEGURE*'
+                : event.kind === 'agenda-start' ? '🎯 *START NOW · TANGIRA NONAHA*'
+                : event.kind === 'agenda' ? '🎯 *NEXT ACTION*' : '🔔 *PERSONAL REMINDER*';
             const details = event.category === 'private' ? 'Private check-in · 27 / 190' : event.title;
+            const instruction = event.kind === 'agenda-advance'
+                ? say('This task begins in '+event.leadMinutes+' minutes. Finish what you are doing and get ready.','Iki gikorwa kiratangira mu minota '+event.leadMinutes+'. Soza ibyo urimo kandi witegure.')
+                : say('It is time to begin. Focus on this task before moving to another.','Igihe cyo gutangira kirageze. Banza wibande kuri iki gikorwa mbere yo kujya ku kindi.');
             await deliver(sock, event.key,
-                label + '\n\n*' + event.time + ' — ' + details + '*\n\nUse .next or .life agenda.', event);
+                label + '\n\n⏰ *' + event.time + ' — ' + details + '*\n\n' + instruction + '\n\n.next', event);
         }
         await runAutoBackup(now);
     } catch(e) { console.warn('[LifeOS] Scheduler error: '+e.message); }
