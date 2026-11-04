@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/kern-mushii-research-engine
+      - feature/mushii-lifeos-bilingual-upgrade
   pull_request:
     branches:
       - main
