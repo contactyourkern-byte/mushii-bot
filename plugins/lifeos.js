@@ -182,12 +182,22 @@ async function deliver(sock, key, text, event = {}) {
             } else if (channel === 'email') {
                 const to = String(process.env.LIFE_OS_EMAIL_TO || '').trim();
                 if (!to) throw new Error('LIFE_OS_EMAIL_TO is not configured.');
-                const content = notificationContent(event);
-                await google.sendEmail({
-                    to,
-                    subject: content.title,
-                    text: String(text).replace(/\*/g, '') + '\n\nOpen MUSHII Life OS in WhatsApp to review your agenda and mark the next action complete.',
-                });
+                const content = notificationContent(event, text);
+                const subject = [content.title, event.title].filter(Boolean).join(' | ').slice(0, 160);
+                const message = [
+                    'Hello,',
+                    '',
+                    'This is your personal MUSHII Life OS reminder.',
+                    '',
+                    String(text).replace(/[*_~\`]/g, ''),
+                    '',
+                    'NEXT STEP',
+                    'Open MUSHII in WhatsApp, review the task and use .next done when it is complete.',
+                    '',
+                    'Kind regards,',
+                    'MUSHII Life OS',
+                ].join('\n');
+                await google.sendEmail({ to, subject, text: message });
             }
             life.markNotificationChannelSent(key, channel);
             results[channel] = Date.now();
