@@ -701,17 +701,33 @@ async function runLife(sock,msg,args,ctx) {
 }
 async function runNext(sock,msg,args,ctx) {
     if(ctx.isGroup) return ctx.reply('🔒 Next Action is private-chat-only.');
-    if(!ctx.isOwner) return ctx.reply('⛔ Next Action is owner-only.');
+    if(!ctx.isOwner) return ctx.reply('⛔ Life OS is owner-only.');
     const act=String(args&&args[0]||'').toLowerCase(), x=life.getNextAction();
-    if(act==='done'||act==='skip') { if(!x) return ctx.reply('No pending agenda item.'); life.markAgendaItem(x.date,x.id,act==='done'?'done':'skipped'); return ctx.reply('✅ *'+x.title+'* marked '+act+'.\n\n'+nextText(life.getNextAction())); }
-    if(act==='delay') {
-        const n=Number(args&&args[1]);
+    if(act==='done'||act==='skip') {
         if(!x) return ctx.reply('No pending agenda item.');
-        if(!Number.isInteger(n)||n<1||n>180) return ctx.reply('Use .next delay <1–180 minutes>.');
-        const t=localParts(Date.now()+n*60000,life.getTimezone());
-        if(t.date!==x.date) return ctx.reply('That delay crosses into tomorrow. Use .life agenda move <id> <HH:MM>.');
-        life.moveAgendaItem(x.date,x.id,t.time);
-        return ctx.reply('⏱️ *'+x.title+'* moved to *'+t.time+'*.\n\n'+nextText(life.getNextAction()));
+        const note=act==='skip'?(args||[]).slice(1).join(' '):'';
+        life.markAgendaItem(x.date,x.id,act==='done'?'done':'skipped',note);
+        const confirmation=act==='done'
+            ?say('Completed. Take the next step without losing momentum.','Urangije. Komereza ku ntambwe ikurikiraho udahagaritse umurongo.')
+            :say('Skipped and recorded. Be honest about the reason, then choose the next realistic step.','Wagisimbutse kandi impamvu irabitswe. Vuga ukuri ku mpamvu, uhitemo intambwe ikurikira ishoboka.');
+        return ctx.reply('✅ *'+x.title+'* · '+(act==='done'?'DONE':'SKIPPED')+(note?'\nNote: '+note:'')+'\n\n'+confirmation+'\n\n'+nextText(life.getNextAction()));
+    }
+    if(act==='delay'||act==='reschedule') {
+        if(!x) return ctx.reply('No pending agenda item.');
+        let newTime;
+        if(act==='delay'){
+            const n=Number(args&&args[1]);
+            if(!Number.isInteger(n)||n<1||n>180)return ctx.reply('Use .next delay <1–180 minutes>.');
+            const t=localParts(Date.now()+n*60000,life.getTimezone());
+            if(t.date!==x.date)return ctx.reply('That delay crosses into tomorrow. Use .life agenda move <id> <HH:MM>.');
+            newTime=t.time;
+        } else {
+            newTime=String(args&&args[1]||'');
+            if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(newTime))return ctx.reply('Use .next reschedule HH:MM.');
+            if(newTime>='23:00')return ctx.reply('Protect your sleep: choose a time before 23:00.');
+        }
+        life.moveAgendaItem(x.date,x.id,newTime);
+        return ctx.reply('⏱️ *'+x.title+'* '+say('rescheduled to','yashyizwe kuri')+' *'+newTime+'*.\n\n'+nextText(life.getNextAction()));
     }
     return ctx.reply(nextText(x));
 }
