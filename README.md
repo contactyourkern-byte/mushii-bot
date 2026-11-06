@@ -27,12 +27,13 @@ Use `.help <command>` for command details.
 
 ## AI auto-reply (owner controlled)
 
-- Automatic replies are ON by default on a fresh install; `.away` checks the current setting.
-- `.away on`: enable AI-generated replies to incoming private WhatsApp messages.
+- Automatic replies are ON by default on a fresh install; use `.away` to inspect the current setting.
+- `.away on`: enable greeting-only AI replies in private one-to-one chats.
 - `.away off`: disable automatic replies.
-
-Replies use the message language where possible and are generated from the actual incoming text. When `OPENROUTER_API_KEY` is set, OpenRouter is tried first (`OPENROUTER_MODEL=openrouter/free` by default); existing ch.at and Pollinations providers are fallbacks. OpenRouter free models have availability and rate limits; this is not unlimited guaranteed hosting. If all free providers are unavailable, the bot does not send a canned reply. Auto-reply ignores groups, the owner, commands, and protocol messages, and applies a per-contact 60-second cooldown. Messages may be sent to the external AI provider handling the request.
-
+- MUSHII answers short greetings in English or Kinyarwanda (for example, "Hello", "Good morning", "Muraho", or "Mwaramutse"). It deliberately ignores ordinary statements, questions and commands. Existing commands such as `.menu` continue through the normal command handler.
+- Each contact receives at most two automatic greeting replies in a rolling 24-hour period, with a 15-second minimum cooldown. The limit is persisted across bot restarts.
+- If AI providers are unavailable, MUSHII uses a short, safe greeting fallback. Optional Gemini and Groq keys can be configured; the existing ch.at and Pollinations routes are public fallbacks and may be unavailable or rate-limited. This is not unlimited guaranteed hosting.
+- AI replies are identified as MUSHII AI. Incoming message text and limited recent private-chat context may be sent to the external AI provider used for the reply.
 ## Documentary research (owner only)
 
 - `.kern scan` / `.kern scan <topic>`: KERN opportunity research.
@@ -65,7 +66,7 @@ Never commit `config.env`, session data, authentication files, passwords, or tok
 
 ## Privacy
 
-MUSHII does not open, forward, or otherwise bypass WhatsApp View Once messages. When a contact deletes a message in a one-to-one chat, MUSHII privately alerts the owner with the sender and deletion time, then forwards the original message when it is available. The in-memory cache is limited to 500 private incoming messages and expires after 24 hours; group messages are not cached or monitored. Messages sent by the owner, disappearing messages, and View Once messages are never forwarded. AI auto-replies are private-chat only, ignore commands and the owner, and are limited by a 60-second per-contact cooldown. No automatic greeting, welcome, goodbye, or other passive bot response is sent into groups; group commands remain available.
+MUSHII does not open, forward, or otherwise bypass WhatsApp View Once messages. When a contact deletes a message in a one-to-one chat, MUSHII privately alerts the owner with the sender and deletion time, then forwards the original message when it is available. The in-memory cache is limited to 500 private incoming messages and expires after 24 hours; group messages are not cached or monitored. Messages sent by the owner, disappearing messages, and View Once messages are never forwarded. AI auto-replies are private-chat only, greeting-only, ignore commands and the owner, and are limited to two replies per contact per rolling 24 hours. No automatic greeting, welcome, goodbye, or other passive bot response is sent into groups; group commands remain available.
 
 ## Configuration
 
@@ -81,6 +82,6 @@ See [LICENSE](LICENSE) for the existing license and attribution.
 
 ## MUSHII Life OS (owner only)
 
-MUSHII Life OS adds private daily agendas, next actions, recurring routines, reminders, goals, journal entries, personal records and daily/weekly reviews. It uses Africa/Kigali by default and sends reminders through WhatsApp, with optional Android pop-ups and Gmail delivery. Encrypted Life OS backups can be saved locally and uploaded to Google Drive.
+MUSHII Life OS adds private daily agendas, next actions, recurring routines, reminders, goals, journal entries, personal records, a categorized MUSHII Book knowledge library, and daily/weekly reviews. It uses Africa/Kigali by default and sends reminders through WhatsApp, with optional Android pop-ups and Gmail delivery. Encrypted Life OS backups can be saved locally and uploaded to Google Drive.
 
-See [docs/life-os.md](docs/life-os.md) for command reference, Google OAuth setup, notification requirements, privacy details and backup instructions. Life OS commands are owner-only and private-chat-only. Google authorization and the backup passphrase are configured privately on the device; never commit tokens, passphrases, WhatsApp session files or config.env.
+AI Auto Reply is greeting-only: it answers short greetings and ignores ordinary incoming messages, with a maximum of two automatic replies per contact in a rolling 24-hour period. Existing command replies such as `.menu` continue to work normally. See [docs/life-os.md](docs/life-os.md) for Life OS and MUSHII Book commands, Google OAuth setup, notification requirements, privacy details and encrypted backup instructions. Life OS commands are owner-only and private-chat-only. Google authorization and the backup passphrase are configured privately on the device; never commit tokens, passphrases, WhatsApp session files or config.env.

@@ -15,7 +15,10 @@ const {
     createAutoReply,
     createConversationHistory,
     isCommandMessage,
-    parseAIReply
+    parseAIReply,
+    isGreetingMessage,
+    shouldAutoReplyToMessage,
+    MAX_AUTO_REPLIES_PER_WINDOW
 } = require('../lib/auto-reply');
 const { __test: awayTest } = require('../plugins/away');
 const adminPlugin = require('../plugins/admin');
@@ -328,7 +331,7 @@ test('parses structured replies and routes sensitive matters to the human owner'
     assert.equal(parseAIReply('⚠️ AI servers are busy right now.'), null);
 });
 
-test('auto reply supplies recent history to the model and remembers its sent reply', async t => {
+test('greeting auto reply supplies recent history and remembers its sent reply', async t => {
     const filePath = await createStatePath(t);
     let capturedHistory = [];
     const autoReply = createAutoReply({
@@ -348,7 +351,7 @@ test('auto reply supplies recent history to the model and remembers its sent rep
     const result = await autoReply.replyToMessage({
         jid: 'contact@s.whatsapp.net',
         sender: 'contact@s.whatsapp.net',
-        text: 'Ese uracyabyibuka?',
+        text: 'Muraho',
         send: async content => {
             sent.push(content.text);
             return { key: { id: 'ai-reply-1' } };
@@ -360,7 +363,7 @@ test('auto reply supplies recent history to the model and remembers its sent rep
     assert.equal(autoReply.getConversationHistory('contact@s.whatsapp.net').at(-1).role, 'outgoing');
 });
 
-test('manual handoff stays silent to the contact and notifies the owner', async t => {
+test('non-greeting messages are left alone without AI replies or owner handoff', async t => {
     const filePath = await createStatePath(t);
     const autoReply = createAutoReply({
         filePath,
@@ -383,13 +386,12 @@ test('manual handoff stays silent to the contact and notifies the owner', async 
 
     assert.equal(await autoReply.replyToMessage(context), false);
     assert.equal(contactMessages, 0);
-    assert.equal(notices.length, 1);
-    assert.equal(notices[0].reason, 'Asaba kwishyura.');
+    assert.equal(notices.length, 0);
     assert.equal(await autoReply.replyToMessage(context), false);
-    assert.equal(notices.length, 1);
+    assert.equal(notices.length, 0);
 });
 
-test('failed generation releases cooldown so a later message can be answered', async t => {
+test('uses a safe greeting fallback when AI generation fails, then applies cooldown', async t => {
     const filePath = await createStatePath(t);
     let calls = 0;
     const autoReply = createAutoReply({
@@ -406,8 +408,8 @@ test('failed generation releases cooldown so a later message can be answered', a
         send: async () => ({ key: { id: 'reply-ok' } })
     };
 
-    assert.equal(await autoReply.replyToMessage(message), false);
     assert.equal(await autoReply.replyToMessage(message), true);
+    assert.equal(await autoReply.replyToMessage(message), false);
 });
 
 test('away command remains owner-only and off clears temporary chat memory', async t => {
@@ -707,4 +709,43 @@ test('status unwrapping supports ephemeral and view-once wrappers', () => {
     });
     assert.equal(result.msgType, 'imageMessage');
     assert.equal(result.inner.imageMessage.caption, 'wrapped status');
+});
+
+test('auto-reply only recognizes short greetings and ignores .menu and ordinary messages', () => {
+    assert.equal(MAX_AUTO_REPLIES_PER_WINDOW, 2);
+    for (const greeting of ['Hi', 'Hello!', 'Good morning', 'Muraho', 'Mwaramutse neza', 'Amakuru yawe?', 'Umeze ute?']) {
+        assert.equal(isGreetingMessage(greeting), true, greeting);
+    }
+    for (const ordinary of ['Can you help me with my assignment?', 'I will call you later.', '.menu', '.life status', 'Thank you for the help.']) {
+        assert.equal(isGreetingMessage(ordinary), false, ordinary);
+        assert.equal(shouldAutoReplyToMessage(ordinary), false, ordinary);
+    }
+});
+
+test('each contact receives at most two greeting auto-replies in a rolling 24-hour window', async t => {
+    const filePath = await createStatePath(t);
+    let timestamp = 2_000_000;
+    let sent = 0;
+    const autoReply = createAutoReply({
+        filePath,
+        now: () => timestamp,
+        generateReply: async () => ({ action: 'reply', reply: 'Muraho neza.' })
+    });
+    autoReply.setEnabled(true);
+    const message = {
+        jid: '250700000001@s.whatsapp.net',
+        senderNumber: '250700000001',
+        text: 'Muraho',
+        send: async () => ({ key: { id: 'reply-' + (++sent) } })
+    };
+    assert.equal(await autoReply.replyToMessage(message), true);
+    timestamp += 16_000;
+    assert.equal(await autoReply.replyToMessage(message), true);
+    timestamp += 16_000;
+    assert.equal(await autoReply.replyToMessage(message), false);
+    assert.equal(sent, 2);
+    const restarted = createAutoReply({ filePath, now: () => timestamp, generateReply: async () => 'Muraho.' });
+    assert.equal(await restarted.replyToMessage(message), false);
+    timestamp += 24 * 60 * 60 * 1000 + 1;
+    assert.equal(await restarted.replyToMessage(message), true);
 });

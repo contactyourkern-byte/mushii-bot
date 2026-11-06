@@ -43,6 +43,11 @@ All Life OS commands are owner-only and private-chat-only. Do not use Life OS co
 | .life record list [query] / .life record show <id> | Read personal records |
 | .life record edit <id> | <category> | <title> | <value> | Update a personal record |
 | .life record delete <id> | Delete a personal record |
+| `.life book create <title> \| <description>` / `.life book list` | Create or list private knowledge books |
+| `.life book add <book-id> \| <sub-book> \| <title> \| <content>` | Save a book entry under a sub-book/section |
+| `.life book entries <book-id> [search]` / `.life book sections <book-id>` | Browse entries or sub-books |
+| `.life book show <book-id> <entry-id>` / `.life book edit ...` | Read or update a book entry |
+| `.life book delete-entry <book-id> <entry-id>` / `.life book delete <book-id>` | Delete an entry or a whole book |
 | .life report day [date] / .life report week [date] | Review progress |
 | .life google connect/status/disconnect | Connect or inspect Google services |
 | .life upload data | Save an encrypted local copy and upload it to Drive |
@@ -95,7 +100,7 @@ Important: OAuth apps left in Google's Testing publishing status have test-user 
 
 - Backups are compressed and encrypted with AES-256-GCM using a key derived with scrypt and a random salt.
 - Drive receives the encrypted file; it does not receive plaintext Life OS JSON.
-- The local encrypted backup directory is data/life-os-backups/. Files use restrictive local permissions.
+- The local encrypted backup directory is data/life-os-backups/. Files use restrictive local permissions. The MUSHII Book is stored inside the same private Life OS data file; therefore .life upload data and scheduled encrypted Drive backups include all books, sub-books/sections and entries. A book edit is saved locally immediately; use .life upload data for an immediate encrypted Drive snapshot, or enable .life settings backup on 22:45 for the scheduled daily snapshot.
 - Keep the passphrase outside the phone and outside Git. Losing it means the encrypted backup cannot be unlocked.
 - .life upload data writes a local encrypted copy first. If Google is not connected, it keeps the local copy and tells the owner to connect Google before retrying the upload.
 - Never upload WhatsApp session files, config.env, or other bot credentials as Life OS backups.
