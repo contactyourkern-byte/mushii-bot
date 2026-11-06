@@ -212,11 +212,11 @@ async function deliver(sock, key, text, event = {}) {
                 const to = String(process.env.LIFE_OS_EMAIL_TO || '').trim();
                 if (!to) throw new Error('LIFE_OS_EMAIL_TO is not configured.');
                 const content = notificationContent(event, text);
-                const subject = [content.title, event.title].filter(Boolean).join(' | ').slice(0, 160);
+                const subject = ['🌱 MUSHII', event.title || content.title].filter(Boolean).join(' | ').slice(0, 160);
                 const message = [
                     'Hello,',
                     '',
-                    'This is your personal MUSHII Life OS reminder.',
+                    'This is your personal 🌱 MUSHII reminder.',
                     '',
                     String(text).replace(/[*_~\`]/g, ''),
                     '',
@@ -224,7 +224,7 @@ async function deliver(sock, key, text, event = {}) {
                     'Open MUSHII in WhatsApp, review the task and use .next done when it is complete.',
                     '',
                     'Kind regards,',
-                    'MUSHII Life OS',
+                    '🌱 MUSHII',
                 ].join('\n');
                 await google.sendEmail({ to, subject, text: message });
             }
@@ -718,7 +718,7 @@ async function runLife(sock,msg,args,ctx) {
                 '\nRecipient configured: '+(Boolean(process.env.LIFE_OS_EMAIL_TO)?'yes':'no')+
                 '\nGoogle connected: '+(google.getStatus().connected?'yes':'no'));
             if(act==='test') {
-                await google.sendEmail({to:process.env.LIFE_OS_EMAIL_TO,subject:'MUSHII Life OS | Email connection test',text:'Hello,\n\nYour MUSHII Life OS email connection is working.\n\nKind regards,\nMUSHII Life OS'});
+                await google.sendEmail({to:process.env.LIFE_OS_EMAIL_TO,subject:'🌱 MUSHII | Email connection test',text:'Hello,\n\nYour MUSHII Life OS email connection is working.\n\nKind regards,\n🌱 MUSHII'});
                 return reply('Test email sent. Check the configured inbox.');
             }
             if(act==='daily'||act==='agenda') {
@@ -751,9 +751,9 @@ async function runLife(sock,msg,args,ctx) {
                     'Take the day one priority at a time. Review or adjust your schedule in WhatsApp with MUSHII Life OS.',
                     '',
                     'Kind regards,',
-                    'MUSHII Life OS'
+                    '🌱 MUSHII'
                 ].join('\n');
-                await google.sendEmail({to:process.env.LIFE_OS_EMAIL_TO,subject:'MUSHII Life OS | Daily plan · '+today,text:body});
+                await google.sendEmail({to:process.env.LIFE_OS_EMAIL_TO,subject:'🌱 MUSHII | Daily plan · '+today,text:body});
                 return reply('📧 Professional daily briefing sent to your configured inbox.');
             }
             return reply('.life email status|test. Set LIFE_OS_EMAIL_TO privately, then enable .life settings email on.');
