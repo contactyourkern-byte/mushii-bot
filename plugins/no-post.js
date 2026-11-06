@@ -55,7 +55,7 @@ function localClock(now = new Date()) {
 function ownerJid(sock) {
     const id = sock?.user?.id || sock?.user?.jid;
     if (!id || typeof id !== 'string') return null;
-    return id.replace(/:\\d+@/, '@');
+    return id.replace(/:\d+@/, '@');
 }
 
 async function tick() {
