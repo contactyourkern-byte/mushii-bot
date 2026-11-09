@@ -95,6 +95,9 @@ const store = createPrivateMessageCache({
     resolveLidPhone,
 });
 
+// Persist only pending ciphertext IDs across socket reconnects in this process.
+const pendingCiphertexts = createPendingCiphertextTracker({ resolveLidPhone });
+
 // ── Reconnect state — module-level so it persists across connectToWhatsApp() calls ──
 let _reconnectCount   = 0;   // how many consecutive failed reconnect attempts
 let _isReconnecting   = false; // guard: only one reconnect in flight at a time
@@ -378,9 +381,6 @@ async function updateProfileStatus(sock) {
 async function connectToWhatsApp() {
     const seenStatusIds = new Set();
     const seenCmdIds = new Set();
-    // Store only IDs for encrypted placeholders; never persist message text or keys.
-    const pendingCiphertexts = createPendingCiphertextTracker();
-
     setInterval(() => {
         if (seenCmdIds.size > 5000) seenCmdIds.clear();
         if (seenStatusIds.size > 5000) seenStatusIds.clear();
