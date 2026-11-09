@@ -924,15 +924,10 @@ async function connectToWhatsApp() {
                     }
                 }
 
-                // Compute timestamp first — used by both the stale-message and type filters.
+                // Keep a timestamp for the stale-history guard. The guard below
+                // preserves late live deliveries and retries of ciphertext placeholders.
                 const msgTs = (m.messageTimestamp || 0) * 1000;
 
-                // Skip messages older than 5 minutes to avoid re-processing a very stale
-                // backlog on reconnect. 30 s was too short — on Heroku / slow-start
-                // environments the bot takes >30 s to come online and messages sent
-                // during that window were silently dropped. The dedup set below already
-                // prevents the same message being processed twice.
-                const cmdMsgId = m.key?.id;
                 const isCiphertextStub = !m.message && m.messageStubType === 2 /* CIPHERTEXT */;
                 const wasPendingCiphertext = pendingCiphertexts.has(m.key);
 
@@ -951,13 +946,9 @@ async function connectToWhatsApp() {
                     wasPendingCiphertext,
                 })) continue;
 
-                // Process all messages that passed the 5-min stale check, regardless of
-                // type.  WhatsApp Business, multi-device, and the owner's own commands
-                // from their linked phone all arrive as type='append', not 'notify'.
-                // Filtering by type here silently drops them.  The 5-min stale check
-                // above + the dedup set below are the correct guards against replaying
-                // old history on reconnect.
-                // (No isRecent / isNotify filter — stale check + dedup is enough.)
+                // Continue handling all upsert types. Older history append events
+                // remain filtered unless they match a ciphertext placeholder already
+                // observed by this running connection.
 
                 // Dedup: only check (not record) here — we record AFTER confirming content.
                 // Recording before the !m.message check poisons the dedup set: an empty
