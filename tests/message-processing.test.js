@@ -669,6 +669,15 @@ test('pending ciphertext tracker stores only bounded message identifiers and exp
     assert.equal(tracker.clear(second), true);
     assert.equal(tracker.has(second), false);
 
+    const lidTracker = createPendingCiphertextTracker({
+        now: () => now,
+        resolveLidPhone: jid => jid === '123456789@lid' ? '254700000000@s.whatsapp.net' : '',
+    });
+    const lidKey = { remoteJid: '123456789@lid', id: 'cipher-alias' };
+    const phoneKey = { remoteJid: '254700000000@s.whatsapp.net', id: 'cipher-alias' };
+    lidTracker.mark(lidKey);
+    assert.equal(lidTracker.has(phoneKey), true);
+
     now += 501;
     assert.equal(tracker.size, 0);
 });
