@@ -75,7 +75,7 @@ const {
     installPrivateDeletionNotifications,
     isOwnerMessage,
 } = require('./lib/deletion-notifications');
-const { trackUndecryptableMessage } = require('./lib/session-recovery');
+const { trackUndecryptableMessage, createPendingCiphertextTracker, shouldSkipStaleMessage } = require('./lib/session-recovery');
 const { initDatabase } = require('./lib/database');
 const { initCallHandler } = require('./plugins/anticall');
 const config = require('./config.js');
@@ -378,6 +378,8 @@ async function updateProfileStatus(sock) {
 async function connectToWhatsApp() {
     const seenStatusIds = new Set();
     const seenCmdIds = new Set();
+    // Store only IDs for encrypted placeholders; never persist message text or keys.
+    const pendingCiphertexts = createPendingCiphertextTracker();
 
     setInterval(() => {
         if (seenCmdIds.size > 5000) seenCmdIds.clear();
@@ -929,7 +931,24 @@ async function connectToWhatsApp() {
                 // environments the bot takes >30 s to come online and messages sent
                 // during that window were silently dropped. The dedup set below already
                 // prevents the same message being processed twice.
-                if (msgTs && (Date.now() - msgTs) > 5 * 60 * 1000) continue;
+                const cmdMsgId = m.key?.id;
+                const isCiphertextStub = !m.message && m.messageStubType === 2 /* CIPHERTEXT */;
+                const wasPendingCiphertext = pendingCiphertexts.has(m.key);
+
+                // Let ciphertext placeholders reach the existing retry path. Keep their
+                // IDs briefly so a late plaintext retry is not mistaken for old history.
+                if (isCiphertextStub) pendingCiphertexts.mark(m.key);
+
+                // Process late live deliveries and retries of a known ciphertext placeholder,
+                // but keep filtering unrelated stale history append events.
+                if (shouldSkipStaleMessage({
+                    timestamp: msgTs,
+                    now: Date.now(),
+                    type,
+                    hasContent: Boolean(m.message),
+                    isCiphertextStub,
+                    wasPendingCiphertext,
+                })) continue;
 
                 // Process all messages that passed the 5-min stale check, regardless of
                 // type.  WhatsApp Business, multi-device, and the owner's own commands
@@ -944,7 +963,6 @@ async function connectToWhatsApp() {
                 // stub delivery (no text/media) would lock the ID, then the real delivery
                 // (with text) would be silently dropped as a "duplicate". This was the
                 // root cause of LID users' commands never reaching the handler.
-                const cmdMsgId = m.key.id;
                 if (isDuplicateMessage(m, seenCmdIds)) continue;
                 // (seenCmdIds.add is deferred — see below after content is confirmed)
 
@@ -973,6 +991,8 @@ async function connectToWhatsApp() {
                     );
                     global._nullMsgCount = recoveryState.count;
                 } else if (m.message) {
+                    // Remove only the ID marker; the tracker never stores message content.
+                    pendingCiphertexts.clear(m.key);
                     // Reset counter as soon as a message decrypts successfully
                     global._nullMsgCount = 0;
                 }
