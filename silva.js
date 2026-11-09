@@ -447,6 +447,7 @@ async function connectToWhatsApp() {
             loadMessage: (jid, id) => store.loadMessage(jid, id),
             deleteMessage: (jid, id) => store.deleteMessage(jid, id),
             isOwnerSender: key => isOwnerMessage(key, getOwnerJid(), resolveLidPhone),
+            resolveLidPhone,
             logError: error => logMessage('ERROR', `Deletion notification failed: ${error.message}`),
         }
     );
