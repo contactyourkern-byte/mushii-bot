@@ -21,6 +21,8 @@ const {
 const {
     UNDECRYPTABLE_LOG_THRESHOLD,
     trackUndecryptableMessage,
+    createPendingCiphertextTracker,
+    shouldSkipStaleMessage,
 } = require('../lib/session-recovery');
 const { containsViewOnceWrapper } = require('../lib/message-utils');
 const {
@@ -324,12 +326,14 @@ function makeDeletionHarness(options = {}) {
     const cache = createPrivateMessageCache({
         now: options.now,
         getOwnerJid: () => '999@s.whatsapp.net',
+        resolveLidPhone: options.resolveLidPhone,
     });
     cache.bind(ev);
     installPrivateDeletionNotifications(sock, () => '999@s.whatsapp.net', {
         now: options.now,
         loadMessage: (jid, id) => cache.loadMessage(jid, id),
         deleteMessage: (jid, id) => cache.deleteMessage(jid, id),
+        resolveLidPhone: options.resolveLidPhone,
         logError: error => { throw error; },
     });
 
@@ -386,6 +390,36 @@ test('forwards deleted private media in its original message type', async () => 
         assert.deepEqual(sent[i * 2 + 1].content, { forward: originals[i], force: true });
         assert.ok(sent[i * 2 + 1].content.forward.message[mediaTypes[i]]);
     }
+});
+
+test('forwards deleted messages when WhatsApp switches between a contact LID and phone JID', async () => {
+    const lidJid = '123456789@lid';
+    const phoneJid = '254700000000@s.whatsapp.net';
+    const resolveLidPhone = jid => {
+        const normalized = String(jid || '').split(':')[0];
+        return normalized === lidJid || normalized === '123456789' ? phoneJid : '';
+    };
+    const { ev, sent, cache } = makeDeletionHarness({ resolveLidPhone });
+    const original = privateMessage(
+        'lid-alias-message',
+        { conversation: 'please keep this message' },
+        { remoteJid: lidJid }
+    );
+    const deletionKey = { ...original.key, remoteJid: phoneJid };
+
+    ev.emit('messages.upsert', { messages: [original] });
+    ev.emit('messages.update', [{
+        key: deletionKey,
+        update: { message: { protocolMessage: { type: 0 } } },
+    }]);
+    // A second revoke event may use the other JID alias; it must not duplicate the alert.
+    ev.emit('messages.delete', { keys: [original.key] });
+    await flushDeletionEvents();
+
+    assert.equal(sent.length, 2);
+    assert.match(sent[0].content.text, /Deleted Message/);
+    assert.deepEqual(sent[1].content, { forward: original, force: true });
+    assert.equal(cache.size, 0);
 });
 
 test('ignores group deletion events completely', async () => {
@@ -584,6 +618,68 @@ test('undecryptable-message tracking only logs and resets its counter', () => {
     state = trackUndecryptableMessage(state, count => logs.push(count));
     assert.deepEqual(logs, [UNDECRYPTABLE_LOG_THRESHOLD]);
     assert.deepEqual(state, { count: 0, thresholdReached: true });
+});
+
+test('late ciphertext placeholders and their eventual plaintext are not dropped as stale history', () => {
+    const now = 10_000;
+    const oldTimestamp = 1_000;
+    const common = {
+        timestamp: oldTimestamp,
+        now,
+        staleAfterMs: 500,
+        hasContent: true,
+    };
+
+    assert.equal(shouldSkipStaleMessage({ ...common, type: 'append' }), true);
+    assert.equal(shouldSkipStaleMessage({
+        ...common,
+        type: 'notify',
+    }), false);
+    assert.equal(shouldSkipStaleMessage({
+        ...common,
+        type: 'append',
+        isCiphertextStub: true,
+        hasContent: false,
+    }), false);
+    assert.equal(shouldSkipStaleMessage({
+        ...common,
+        type: 'append',
+        wasPendingCiphertext: true,
+    }), false);
+});
+
+test('pending ciphertext tracker stores only bounded message identifiers and expires them', () => {
+    let now = 100;
+    const tracker = createPendingCiphertextTracker({
+        now: () => now,
+        ttlMs: 500,
+        limit: 2,
+    });
+    const first = { remoteJid: 'a@s.whatsapp.net', id: 'cipher-1' };
+    const second = { remoteJid: 'b@s.whatsapp.net', id: 'cipher-2' };
+    const third = { remoteJid: 'c@s.whatsapp.net', id: 'cipher-3' };
+
+    assert.equal(tracker.mark(first), true);
+    assert.equal(tracker.has(first), true);
+    tracker.mark(second);
+    tracker.mark(third);
+    assert.equal(tracker.size, 2);
+    assert.equal(tracker.has(first), false);
+    assert.equal(tracker.has(second), true);
+    assert.equal(tracker.clear(second), true);
+    assert.equal(tracker.has(second), false);
+
+    const lidTracker = createPendingCiphertextTracker({
+        now: () => now,
+        resolveLidPhone: jid => jid === '123456789@lid' ? '254700000000@s.whatsapp.net' : '',
+    });
+    const lidKey = { remoteJid: '123456789@lid', id: 'cipher-alias' };
+    const phoneKey = { remoteJid: '254700000000@s.whatsapp.net', id: 'cipher-alias' };
+    lidTracker.mark(lidKey);
+    assert.equal(lidTracker.has(phoneKey), true);
+
+    now += 501;
+    assert.equal(tracker.size, 0);
 });
 
 test('greeting rate limit allows three replies in a rolling 24-hour window', () => {
