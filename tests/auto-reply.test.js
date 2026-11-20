@@ -749,3 +749,37 @@ test('each contact can receive unlimited AI replies with only a 15-second cooldo
     assert.equal(await restarted.replyToMessage(message), true);
     assert.equal(sent, 4);
 });
+
+
+test('aireply owner command controls global state and individual contact opt-outs', async t => {
+    const filePath = await createStatePath(t);
+    const autoReply = createAutoReply({ filePath });
+    const away = awayTest.createAwayPlugin(autoReply);
+    const replies = [];
+    const context = {
+        isOwner: true,
+        command: 'aireply',
+        reply: async text => replies.push(text)
+    };
+
+    await away.run({}, {}, ['all', 'on'], context);
+    assert.equal(autoReply.isEnabled(), true);
+    assert.match(replies.pop(), /unlimited AI replies/);
+
+    await away.run({}, {}, ['off', '250700000001'], context);
+    assert.equal(autoReply.isContactMuted({ senderNumber: '250700000001' }), true);
+    assert.match(replies.pop(), /disabled for/);
+
+    await away.run({}, {}, ['on', '250700000001'], context);
+    assert.equal(autoReply.isContactMuted({ senderNumber: '250700000001' }), false);
+    assert.match(replies.pop(), /enabled for/);
+
+    await away.run({}, {}, ['all', 'off'], context);
+    assert.equal(autoReply.isEnabled(), false);
+    assert.match(replies.pop(), /disabled globally/);
+
+    context.isOwner = false;
+    await away.run({}, {}, ['all', 'on'], context);
+    assert.equal(autoReply.isEnabled(), false);
+    assert.match(replies.pop(), /Only the bot owner/);
+});
