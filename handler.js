@@ -371,6 +371,15 @@ async function handleMessages(sock, message) {
             || ''
         ) : '';
         const senderNumberForAway = jidToNum(lidPhoneForAway || from);
+        // Apply the owner's per-contact opt-out to every automatic-reply path,
+        // including the separate scheduled .autoreply responder below.
+        const optedOutOfAutoReplyForAway = Boolean(awayPlugin
+            && typeof awayPlugin.isContactMuted === 'function'
+            && awayPlugin.isContactMuted({
+                sender: from,
+                senderNumber: senderNumberForAway,
+                jid
+            }));
         const botNumberForAway = String(global.botNum || '').replace(/\D/g, '');
         const botLidForAway = jidNormalizedUser(global.botLid || '');
         const senderNormForAway = jidNormalizedUser(from);
@@ -480,7 +489,7 @@ async function handleMessages(sock, message) {
             if (typeof global.addXP === 'function') {
                 try { global.addXP(jid, from); } catch {}
             }
-            if (!isGroup && typeof global.checkAutoReply === 'function') {
+            if (!isGroup && !optedOutOfAutoReplyForAway && typeof global.checkAutoReply === 'function') {
                 try {
                     const autoReply = global.checkAutoReply(from);
                     if (autoReply) {
