@@ -208,7 +208,7 @@ function createAwayPlugin(autoReply = createAutoReply()) {
                     'MUSHII AI Auto Reply is currently *' + status + '*.',
                     fixed.enabled ? '• Reply mode: fixed message' : '• Reply mode: AI-generated',
                     '',
-                    '• Short greetings only · Kinyarwanda and English',
+                    '• Eligible private messages · Kinyarwanda and English',
                     '• Unlimited automatic replies (no daily cap)',
                     '• 15-second cooldown per contact',
                     '• Every reply includes an AI identity footer and one optional personal phrase',
