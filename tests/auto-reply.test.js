@@ -391,25 +391,31 @@ test('ordinary private messages are sent to AI and sensitive requests are handed
     assert.equal(notices.length, 1);
 });
 
-test('uses a safe greeting fallback when AI generation fails, then applies cooldown', async t => {
+test('does not send a generic greeting when AI generation fails and leaves contact free to retry', async t => {
     const filePath = await createStatePath(t);
     let calls = 0;
+    let sends = 0;
     const autoReply = createAutoReply({
         filePath,
         generateReply: async () => {
             calls++;
-            return calls === 1 ? null : { action: 'reply', reply: 'Muraho.' };
+            return calls === 1 ? null : { action: 'reply', reply: 'Here is a useful answer.' };
         }
     });
     autoReply.setEnabled(true);
     const message = {
         jid: 'contact@s.whatsapp.net',
-        text: 'Muraho',
-        send: async () => ({ key: { id: 'reply-ok' } })
+        text: 'Explain how I can start a small business with little money.',
+        send: async () => {
+            sends++;
+            return { key: { id: 'reply-ok' } };
+        }
     };
 
-    assert.equal(await autoReply.replyToMessage(message), true);
     assert.equal(await autoReply.replyToMessage(message), false);
+    assert.equal(sends, 0);
+    assert.equal(await autoReply.replyToMessage(message), true);
+    assert.equal(sends, 1);
 });
 
 test('away command remains owner-only and off clears temporary chat memory', async t => {
