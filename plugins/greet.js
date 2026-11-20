@@ -186,7 +186,8 @@ function createAutoGreeting(options = {}) {
 
     return async (sock, message, _text, context = {}) => {
         const jid = context.jid || message?.key?.remoteJid;
-        if (!isPrivateJid(jid) || context.isGroup || message?.key?.fromMe || context.isOwner) return;
+        if (!isPrivateJid(jid) || context.isGroup || message?.key?.fromMe
+            || context.isOwner || context.isContactMuted) return;
         if (!enabled()) return;
 
         const reservation = limiter.reserve(jid);

@@ -10,6 +10,7 @@ const axios = require('axios');
 const {
     COOLDOWN_MS,
     HISTORY_LIMIT,
+    contactKeys,
     buildAutoReplyPrompt,
     finalizeAutoReply,
     createAutoReply,
@@ -21,6 +22,7 @@ const {
     MAX_AUTO_REPLIES_PER_WINDOW
 } = require('../lib/auto-reply');
 const { __test: awayTest } = require('../plugins/away');
+const { __test: greetingTest } = require('../plugins/greet');
 const adminPlugin = require('../plugins/admin');
 const { plugins: loadedPlugins } = require('../handler');
 const { firstAvailable, askAIFast } = require('../plugins/ai2');
@@ -31,6 +33,66 @@ async function createStatePath(t) {
     return path.join(directory, 'away.json');
 }
 
+
+
+test('per-contact opt-outs match LID chats through the cached phone mapping', async t => {
+    const previousPhoneCache = global.lidPhoneCache;
+    const previousJidMap = global.lidJidMap;
+    const lid = '987654321@lid';
+    const phone = '250788123456';
+    global.lidPhoneCache = new Map([[lid, phone], ['987654321', phone]]);
+    global.lidJidMap = new Map();
+
+    t.after(() => {
+        if (previousPhoneCache === undefined) delete global.lidPhoneCache;
+        else global.lidPhoneCache = previousPhoneCache;
+        if (previousJidMap === undefined) delete global.lidJidMap;
+        else global.lidJidMap = previousJidMap;
+    });
+
+    assert.ok(contactKeys(lid).includes(phone));
+    assert.ok(contactKeys('987654321:4@lid').includes(phone));
+
+    const autoReply = createAutoReply({ filePath: await createStatePath(t) });
+    autoReply.muteContact(phone);
+    assert.equal(autoReply.isContactMuted({
+        sender: '987654321:4@lid',
+        senderNumber: '',
+        jid: '987654321@lid'
+    }), true);
+});
+
+test('automatic greetings respect a contact-level opt-out', async t => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mushii-greet-optout-'));
+    t.after(() => fs.rm(directory, { recursive: true, force: true }));
+    const limiter = greetingTest.createReplyLimiter({
+        filePath: path.join(directory, 'reply-limits.json')
+    });
+    const greet = greetingTest.createAutoGreeting({
+        limiter,
+        random: () => 0,
+        enabled: () => true
+    });
+    const sent = [];
+    const jid = '250788123456@s.whatsapp.net';
+
+    await greet({
+        sendMessage: async (...args) => {
+            sent.push(args);
+            return { key: { id: 'unexpected-greeting' } };
+        }
+    }, {
+        key: { id: 'opted-out-greeting', remoteJid: jid, fromMe: false },
+        message: { conversation: 'Hello' }
+    }, 'Hello', {
+        jid,
+        isGroup: false,
+        isContactMuted: true,
+        availableCommands: new Set()
+    });
+
+    assert.equal(sent.length, 0);
+});
 
 test('finalizes every AI reply with a language-matched identity and optional personal footer', () => {
     const english = finalizeAutoReply('MUSHII AI: I am still learning, thank you for your patience.', 'I may need to check that personally.');
@@ -363,7 +425,7 @@ test('greeting auto reply supplies recent history and remembers its sent reply',
     assert.equal(autoReply.getConversationHistory('contact@s.whatsapp.net').at(-1).role, 'outgoing');
 });
 
-test('non-greeting messages are left alone without AI replies or owner handoff', async t => {
+test('ordinary private messages are sent to AI and sensitive requests are handed to the owner', async t => {
     const filePath = await createStatePath(t);
     const autoReply = createAutoReply({
         filePath,
@@ -386,30 +448,36 @@ test('non-greeting messages are left alone without AI replies or owner handoff',
 
     assert.equal(await autoReply.replyToMessage(context), false);
     assert.equal(contactMessages, 0);
-    assert.equal(notices.length, 0);
+    assert.equal(notices.length, 1);
     assert.equal(await autoReply.replyToMessage(context), false);
-    assert.equal(notices.length, 0);
+    assert.equal(notices.length, 1);
 });
 
-test('uses a safe greeting fallback when AI generation fails, then applies cooldown', async t => {
+test('does not send a generic greeting when AI generation fails and leaves contact free to retry', async t => {
     const filePath = await createStatePath(t);
     let calls = 0;
+    let sends = 0;
     const autoReply = createAutoReply({
         filePath,
         generateReply: async () => {
             calls++;
-            return calls === 1 ? null : { action: 'reply', reply: 'Muraho.' };
+            return calls === 1 ? null : { action: 'reply', reply: 'Here is a useful answer.' };
         }
     });
     autoReply.setEnabled(true);
     const message = {
         jid: 'contact@s.whatsapp.net',
-        text: 'Muraho',
-        send: async () => ({ key: { id: 'reply-ok' } })
+        text: 'Explain how I can start a small business with little money.',
+        send: async () => {
+            sends++;
+            return { key: { id: 'reply-ok' } };
+        }
     };
 
-    assert.equal(await autoReply.replyToMessage(message), true);
     assert.equal(await autoReply.replyToMessage(message), false);
+    assert.equal(sends, 0);
+    assert.equal(await autoReply.replyToMessage(message), true);
+    assert.equal(sends, 1);
 });
 
 test('away command remains owner-only and off clears temporary chat memory', async t => {
@@ -452,7 +520,7 @@ test('registered commands are not treated as conversation prompts', () => {
 
 test('keeps all away and scheduled auto-reply commands registered', () => {
     const commands = new Set(loadedPlugins.flatMap(plugin => plugin.commands || []));
-    for (const command of ['away', 'awaymute', 'awayunmute', 'awaymuted', 'autoreply', 'awaymsg', 'setaway', 'awayoff']) {
+    for (const command of ['away', 'aireply', 'awaymute', 'awayunmute', 'awaymuted', 'autoreply', 'awaymsg', 'setaway', 'awayoff']) {
         assert.ok(commands.has(command), 'Expected auto-reply command .' + command + ' to remain registered');
     }
 });
@@ -711,18 +779,17 @@ test('status unwrapping supports ephemeral and view-once wrappers', () => {
     assert.equal(result.inner.imageMessage.caption, 'wrapped status');
 });
 
-test('auto-reply only recognizes short greetings and ignores .menu and ordinary messages', () => {
-    assert.equal(MAX_AUTO_REPLIES_PER_WINDOW, 2);
+test('greeting detection remains available while normal private messages can use AI auto-reply', () => {
+    assert.equal(MAX_AUTO_REPLIES_PER_WINDOW, Infinity);
     for (const greeting of ['Hi', 'Hello!', 'Good morning', 'Muraho', 'Mwaramutse neza', 'Amakuru yawe?', 'Umeze ute?']) {
         assert.equal(isGreetingMessage(greeting), true, greeting);
     }
     for (const ordinary of ['Can you help me with my assignment?', 'I will call you later.', '.menu', '.life status', 'Thank you for the help.']) {
         assert.equal(isGreetingMessage(ordinary), false, ordinary);
-        assert.equal(shouldAutoReplyToMessage(ordinary), false, ordinary);
     }
 });
 
-test('each contact receives at most two greeting auto-replies in a rolling 24-hour window', async t => {
+test('each contact can receive unlimited AI replies with only a 15-second cooldown', async t => {
     const filePath = await createStatePath(t);
     let timestamp = 2_000_000;
     let sent = 0;
@@ -742,10 +809,45 @@ test('each contact receives at most two greeting auto-replies in a rolling 24-ho
     timestamp += 16_000;
     assert.equal(await autoReply.replyToMessage(message), true);
     timestamp += 16_000;
-    assert.equal(await autoReply.replyToMessage(message), false);
-    assert.equal(sent, 2);
+    assert.equal(await autoReply.replyToMessage(message), true);
+    assert.equal(sent, 3);
     const restarted = createAutoReply({ filePath, now: () => timestamp, generateReply: async () => 'Muraho.' });
     assert.equal(await restarted.replyToMessage(message), false);
-    timestamp += 24 * 60 * 60 * 1000 + 1;
+    timestamp += 15_000;
     assert.equal(await restarted.replyToMessage(message), true);
+    assert.equal(sent, 4);
+});
+
+
+test('aireply owner command controls global state and individual contact opt-outs', async t => {
+    const filePath = await createStatePath(t);
+    const autoReply = createAutoReply({ filePath });
+    const away = awayTest.createAwayPlugin(autoReply);
+    const replies = [];
+    const context = {
+        isOwner: true,
+        command: 'aireply',
+        reply: async text => replies.push(text)
+    };
+
+    await away.run({}, {}, ['all', 'on'], context);
+    assert.equal(autoReply.isEnabled(), true);
+    assert.match(replies.pop(), /unlimited AI replies/);
+
+    await away.run({}, {}, ['off', '250700000001'], context);
+    assert.equal(autoReply.isContactMuted({ senderNumber: '250700000001' }), true);
+    assert.match(replies.pop(), /disabled for/);
+
+    await away.run({}, {}, ['on', '250700000001'], context);
+    assert.equal(autoReply.isContactMuted({ senderNumber: '250700000001' }), false);
+    assert.match(replies.pop(), /enabled for/);
+
+    await away.run({}, {}, ['all', 'off'], context);
+    assert.equal(autoReply.isEnabled(), false);
+    assert.match(replies.pop(), /disabled globally/);
+
+    context.isOwner = false;
+    await away.run({}, {}, ['all', 'on'], context);
+    assert.equal(autoReply.isEnabled(), false);
+    assert.match(replies.pop(), /Only the bot owner/);
 });
