@@ -505,6 +505,7 @@ async function handleMessages(sock, message) {
                 await p.onMessage(sock, message, text, {
                     jid, sender, from, isGroup,
                     isOwner,
+                    isContactMuted: optedOutOfAutoReplyForAway,
                     availableCommands: new Set(plugins.flatMap(plugin => plugin.commands || [])),
                     contextInfo: isGroup ? {} : GLOBAL_CONTEXT_INFO
                 });
