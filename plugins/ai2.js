@@ -155,14 +155,15 @@ async function firstAvailable(tasks, timeoutMs = 7000) {
     }
 }
 
-async function askAIFast(prompt, timeoutMs = 9000) {
+async function askAIFast(prompt, timeoutMs = 30000) {
     const input = String(prompt || '').slice(0, 7000);
     const deadline = Date.now() + Math.max(500, timeoutMs);
     const providers = [
-        { name: 'Gemini', enabled: Boolean(String(process.env.GEMINI_API_KEY || '').trim()), budget: 4000, run: ms => callGemini(input, ms, 450) },
-        { name: 'Groq', enabled: Boolean(String(process.env.GROQ_API_KEY || '').trim()), budget: 3500, run: ms => callGroq(input, ms, 450) },
-        { name: 'ch.at', enabled: true, budget: 900, run: ms => callChAt(input, 1, ms) },
-        { name: 'Pollinations', enabled: true, budget: 900, run: ms => callPollinations(input, ms) }
+        { name: 'Gemini', enabled: Boolean(String(process.env.GEMINI_API_KEY || '').trim()), budget: 5000, run: ms => callGemini(input, ms, 450) },
+        { name: 'Groq', enabled: Boolean(String(process.env.GROQ_API_KEY || '').trim()), budget: 5000, run: ms => callGroq(input, ms, 450) },
+        { name: 'OpenRouter', enabled: Boolean(String(process.env.OPENROUTER_API_KEY || '').trim()), budget: 6000, run: ms => callOpenRouter(input, ms, 450) },
+        { name: 'ch.at', enabled: true, budget: 7000, run: ms => callChAt(input, 1, ms) },
+        { name: 'Pollinations', enabled: true, budget: 7000, run: ms => callPollinations(input, ms) }
     ];
 
     for (const provider of providers) {
@@ -184,7 +185,7 @@ async function askAIFast(prompt, timeoutMs = 9000) {
 }
 
 async function askAI(prompt) {
-    const result = await askAIFast(prompt, 12000);
+    const result = await askAIFast(prompt, 30000);
     return result || '⚠️ AI servers are busy right now. Please try again in a moment.';
 }
 
