@@ -14,7 +14,9 @@ function createAwayPlugin(autoReply = createAutoReply()) {
         isAwayEnabled: () => autoReply.isEnabled(),
         recordConversationMessage: (message, text) => autoReply.recordConversationMessage(message, text),
         getConversationHistory: jid => autoReply.getConversationHistory(jid),
-        isContactMuted: identifier => autoReply.isContactMuted({ sender: identifier, senderNumber: identifier, jid: identifier }),
+        isContactMuted: identifier => identifier && typeof identifier === 'object'
+            ? autoReply.isContactMuted(identifier)
+            : autoReply.isContactMuted({ sender: identifier, senderNumber: identifier, jid: identifier }),
         muteContact: identifier => autoReply.muteContact(identifier),
         unmuteContact: identifier => autoReply.unmuteContact(identifier),
         getMutedContacts: () => autoReply.getMutedContacts(),
