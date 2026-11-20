@@ -4,7 +4,7 @@ const { createAutoReply } = require('../lib/auto-reply');
 
 function createAwayPlugin(autoReply = createAutoReply()) {
     return {
-        commands: ['away', 'awaymute', 'awayunmute', 'awaymuted', 'awaytemplate', 'awaymessage'],
+        commands: ['away', 'aireply', 'awaymute', 'awayunmute', 'awaymuted', 'awaytemplate', 'awaymessage'],
         description: 'Toggle fixed or AI-generated automatic private-message replies while away',
         usage: '.away on | .away off',
         permission: 'owner',
@@ -48,6 +48,63 @@ function createAwayPlugin(autoReply = createAutoReply()) {
             }
 
             const command = String(context.command || '').toLowerCase();
+
+            if (command === 'aireply') {
+                const action = String(args[0] || 'status').toLowerCase();
+                const target = String(args[1] || '').trim();
+
+                if (action === 'all') {
+                    const toggle = target.toLowerCase();
+                    if (!['on', 'off'].includes(toggle)) {
+                        return context.reply('Usage: .aireply all on | .aireply all off');
+                    }
+                    autoReply.setEnabled(toggle === 'on');
+                    return context.reply(toggle === 'on'
+                        ? '✅ *MUSHII AI Auto Reply enabled globally.* Private contacts can receive unlimited AI replies, with a 15-second cooldown per contact.'
+                        : '🛑 *MUSHII AI Auto Reply disabled globally.*');
+                }
+
+                if (action === 'on' || action === 'off') {
+                    if (!target) {
+                        return context.reply('Usage: .aireply on <phone-number>\n.aireply off <phone-number>\nUse .aireply all on/off for the global switch.');
+                    }
+                    try {
+                        const changed = action === 'off'
+                            ? autoReply.muteContact(target)
+                            : autoReply.unmuteContact(target);
+                        return context.reply(action === 'off'
+                            ? (changed ? '🔕 AI replies disabled for *' + target + '* only.' : 'ℹ️ AI replies were already disabled for *' + target + '*.')
+                            : (changed ? '🔔 AI replies enabled for *' + target + '*.' : 'ℹ️ AI replies were already enabled for *' + target + '*.'));
+                    } catch (error) {
+                        return context.reply('⚠️ ' + error.message + '\nUse a full phone number with country code or a private WhatsApp JID.');
+                    }
+                }
+
+                if (action === 'list') {
+                    const contacts = autoReply.getMutedContacts();
+                    return context.reply(contacts.length
+                        ? '*Contacts opted out of MUSHII AI replies:*\n' + contacts.map((value, index) => (index + 1) + '. ' + value).join('\n')
+                        : '✅ No contacts have opted out of MUSHII AI replies.');
+                }
+
+                if (action === 'status') {
+                    return context.reply([
+                        '*🌱 MUSHII AI REPLY STATUS*',
+                        'Global: ' + (autoReply.isEnabled() ? 'ON' : 'OFF'),
+                        'Daily limit: none',
+                        'Per-contact cooldown: 15 seconds',
+                        'Scope: private chats only (no groups)',
+                        'Muted contacts: ' + autoReply.getMutedContacts().length,
+                        '',
+                        'Commands:',
+                        '.aireply all on | .aireply all off',
+                        '.aireply off <number> | .aireply on <number>',
+                        '.aireply list'
+                    ].join('\n'));
+                }
+
+                return context.reply('Commands:\n.aireply status\n.aireply all on\n.aireply all off\n.aireply off <number>\n.aireply on <number>\n.aireply list');
+            }
 
             if (command === 'awaymessage') {
                 if (!context.isOwner) return context.reply('⛔ Only the bot owner can change the fixed away message.');
@@ -152,8 +209,8 @@ function createAwayPlugin(autoReply = createAutoReply()) {
                     fixed.enabled ? '• Reply mode: fixed message' : '• Reply mode: AI-generated',
                     '',
                     '• Short greetings only · Kinyarwanda and English',
-                    '• At most 2 automatic replies per contact in 24 hours',
-                    '• 15-second minimum cooldown per contact',
+                    '• Unlimited automatic replies (no daily cap)',
+                    '• 15-second cooldown per contact',
                     '• Every reply includes an AI identity footer and one optional personal phrase',
                     '',
                     'Commands: .away on | .away off',
@@ -169,7 +226,7 @@ function createAwayPlugin(autoReply = createAutoReply()) {
             return context.reply(enabled
                 ? fixedMode
                     ? '✅ *MUSHII Auto Reply is ON.*\n\nYour fixed away message will be sent to private contacts, with the MUSHII AI identity footer. Use `.awaymessage ai` to return to AI-generated replies.'
-                    : '✅ *MUSHII AI Auto Reply is ON.*\n\nI will warmly answer short greetings only, at most twice per contact in 24 hours. Ordinary messages stay for you to answer, and all existing commands such as `.menu` continue working normally.'
+                    : '✅ *MUSHII AI Auto Reply is ON.*\n\nI will answer eligible private messages with AI, with no daily cap and a 15-second per-contact cooldown. Groups are excluded, and existing commands such as `.menu` continue working normally.'
                 : '✅ *MUSHII AI Auto Reply is OFF.*\n\nAutomatic replies are disabled and temporary conversation memory has been cleared.');
         }
     };
