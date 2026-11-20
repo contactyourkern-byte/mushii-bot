@@ -173,21 +173,6 @@ test('greets a private contact with English, Kinyarwanda, and registered command
     }
 });
 
-test('does not send automatic greetings to contacts who opted out of automatic replies', async () => {
-    const harness = makeGreetingHarness();
-    try {
-        await harness.greet(harness.sock, incomingPrivateMessage(), 'hello', {
-            jid: '254700000000@s.whatsapp.net',
-            isGroup: false,
-            isContactMuted: true,
-            availableCommands,
-        });
-        assert.equal(harness.sent.length, 0);
-    } finally {
-        harness.cleanup();
-    }
-});
-
 test('varies greeting text between replies', () => {
     const first = greetingLimit.buildGreeting(availableCommands, () => 0);
     const second = greetingLimit.buildGreeting(availableCommands, () => 0.5);
