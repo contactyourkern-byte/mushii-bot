@@ -10,6 +10,7 @@ const axios = require('axios');
 const {
     COOLDOWN_MS,
     HISTORY_LIMIT,
+    contactKeys,
     buildAutoReplyPrompt,
     finalizeAutoReply,
     createAutoReply,
@@ -31,6 +32,34 @@ async function createStatePath(t) {
     return path.join(directory, 'away.json');
 }
 
+
+
+test('per-contact opt-outs match LID chats through the cached phone mapping', async t => {
+    const previousPhoneCache = global.lidPhoneCache;
+    const previousJidMap = global.lidJidMap;
+    const lid = '987654321@lid';
+    const phone = '250788123456';
+    global.lidPhoneCache = new Map([[lid, phone], ['987654321', phone]]);
+    global.lidJidMap = new Map();
+
+    t.after(() => {
+        if (previousPhoneCache === undefined) delete global.lidPhoneCache;
+        else global.lidPhoneCache = previousPhoneCache;
+        if (previousJidMap === undefined) delete global.lidJidMap;
+        else global.lidJidMap = previousJidMap;
+    });
+
+    assert.ok(contactKeys(lid).includes(phone));
+    assert.ok(contactKeys('987654321:4@lid').includes(phone));
+
+    const autoReply = createAutoReply({ filePath: await createStatePath(t) });
+    autoReply.muteContact(phone);
+    assert.equal(autoReply.isContactMuted({
+        sender: '987654321:4@lid',
+        senderNumber: '',
+        jid: '987654321@lid'
+    }), true);
+});
 
 test('finalizes every AI reply with a language-matched identity and optional personal footer', () => {
     const english = finalizeAutoReply('MUSHII AI: I am still learning, thank you for your patience.', 'I may need to check that personally.');
