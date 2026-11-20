@@ -22,6 +22,7 @@ const {
     MAX_AUTO_REPLIES_PER_WINDOW
 } = require('../lib/auto-reply');
 const { __test: awayTest } = require('../plugins/away');
+const { __test: greetingTest } = require('../plugins/greet');
 const adminPlugin = require('../plugins/admin');
 const { plugins: loadedPlugins } = require('../handler');
 const { firstAvailable, askAIFast } = require('../plugins/ai2');
@@ -59,6 +60,38 @@ test('per-contact opt-outs match LID chats through the cached phone mapping', as
         senderNumber: '',
         jid: '987654321@lid'
     }), true);
+});
+
+test('automatic greetings respect a contact-level opt-out', async t => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mushii-greet-optout-'));
+    t.after(() => fs.rm(directory, { recursive: true, force: true }));
+    const limiter = greetingTest.createReplyLimiter({
+        filePath: path.join(directory, 'reply-limits.json')
+    });
+    const greet = greetingTest.createAutoGreeting({
+        limiter,
+        random: () => 0,
+        enabled: () => true
+    });
+    const sent = [];
+    const jid = '250788123456@s.whatsapp.net';
+
+    await greet({
+        sendMessage: async (...args) => {
+            sent.push(args);
+            return { key: { id: 'unexpected-greeting' } };
+        }
+    }, {
+        key: { id: 'opted-out-greeting', remoteJid: jid, fromMe: false },
+        message: { conversation: 'Hello' }
+    }, 'Hello', {
+        jid,
+        isGroup: false,
+        isContactMuted: true,
+        availableCommands: new Set()
+    });
+
+    assert.equal(sent.length, 0);
 });
 
 test('finalizes every AI reply with a language-matched identity and optional personal footer', () => {
