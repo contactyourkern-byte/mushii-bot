@@ -363,7 +363,7 @@ test('greeting auto reply supplies recent history and remembers its sent reply',
     assert.equal(autoReply.getConversationHistory('contact@s.whatsapp.net').at(-1).role, 'outgoing');
 });
 
-test('non-greeting messages are left alone without AI replies or owner handoff', async t => {
+test('ordinary private messages are sent to AI and sensitive requests are handed to the owner', async t => {
     const filePath = await createStatePath(t);
     const autoReply = createAutoReply({
         filePath,
@@ -386,9 +386,9 @@ test('non-greeting messages are left alone without AI replies or owner handoff',
 
     assert.equal(await autoReply.replyToMessage(context), false);
     assert.equal(contactMessages, 0);
-    assert.equal(notices.length, 0);
+    assert.equal(notices.length, 1);
     assert.equal(await autoReply.replyToMessage(context), false);
-    assert.equal(notices.length, 0);
+    assert.equal(notices.length, 1);
 });
 
 test('uses a safe greeting fallback when AI generation fails, then applies cooldown', async t => {
@@ -452,7 +452,7 @@ test('registered commands are not treated as conversation prompts', () => {
 
 test('keeps all away and scheduled auto-reply commands registered', () => {
     const commands = new Set(loadedPlugins.flatMap(plugin => plugin.commands || []));
-    for (const command of ['away', 'awaymute', 'awayunmute', 'awaymuted', 'autoreply', 'awaymsg', 'setaway', 'awayoff']) {
+    for (const command of ['away', 'aireply', 'awaymute', 'awayunmute', 'awaymuted', 'autoreply', 'awaymsg', 'setaway', 'awayoff']) {
         assert.ok(commands.has(command), 'Expected auto-reply command .' + command + ' to remain registered');
     }
 });
