@@ -711,18 +711,17 @@ test('status unwrapping supports ephemeral and view-once wrappers', () => {
     assert.equal(result.inner.imageMessage.caption, 'wrapped status');
 });
 
-test('auto-reply only recognizes short greetings and ignores .menu and ordinary messages', () => {
-    assert.equal(MAX_AUTO_REPLIES_PER_WINDOW, 2);
+test('greeting detection remains available while normal private messages can use AI auto-reply', () => {
+    assert.equal(MAX_AUTO_REPLIES_PER_WINDOW, Infinity);
     for (const greeting of ['Hi', 'Hello!', 'Good morning', 'Muraho', 'Mwaramutse neza', 'Amakuru yawe?', 'Umeze ute?']) {
         assert.equal(isGreetingMessage(greeting), true, greeting);
     }
     for (const ordinary of ['Can you help me with my assignment?', 'I will call you later.', '.menu', '.life status', 'Thank you for the help.']) {
         assert.equal(isGreetingMessage(ordinary), false, ordinary);
-        assert.equal(shouldAutoReplyToMessage(ordinary), false, ordinary);
     }
 });
 
-test('each contact receives at most two greeting auto-replies in a rolling 24-hour window', async t => {
+test('each contact can receive unlimited AI replies with only a 15-second cooldown', async t => {
     const filePath = await createStatePath(t);
     let timestamp = 2_000_000;
     let sent = 0;
@@ -742,10 +741,11 @@ test('each contact receives at most two greeting auto-replies in a rolling 24-ho
     timestamp += 16_000;
     assert.equal(await autoReply.replyToMessage(message), true);
     timestamp += 16_000;
-    assert.equal(await autoReply.replyToMessage(message), false);
-    assert.equal(sent, 2);
+    assert.equal(await autoReply.replyToMessage(message), true);
+    assert.equal(sent, 3);
     const restarted = createAutoReply({ filePath, now: () => timestamp, generateReply: async () => 'Muraho.' });
     assert.equal(await restarted.replyToMessage(message), false);
-    timestamp += 24 * 60 * 60 * 1000 + 1;
+    timestamp += 15_000;
     assert.equal(await restarted.replyToMessage(message), true);
+    assert.equal(sent, 4);
 });
